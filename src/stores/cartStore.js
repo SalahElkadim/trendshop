@@ -1,0 +1,113 @@
+import { makeAutoObservable, runInAction } from "mobx";
+import { cartAPI } from "../api/services";
+import { message } from "antd";
+
+class CartStore {
+  cart = null; // { id, items, total_items, subtotal }
+  isLoading = false;
+  isOpen = false; // Drawer مفتوح؟
+
+  constructor() {
+    makeAutoObservable(this);
+  }
+
+  get itemsCount() {
+    return this.cart?.total_items || 0;
+  }
+
+  get subtotal() {
+    return this.cart?.subtotal || 0;
+  }
+
+  get items() {
+    return this.cart?.items || [];
+  }
+
+  // ── Fetch Cart ────────────────────────────────────────────
+  async fetchCart() {
+    this.isLoading = true;
+    try {
+      const res = await cartAPI.getCart();
+      runInAction(() => {
+        this.cart = res.data.data;
+      });
+    } catch {
+      // silent fail للـ guest
+    } finally {
+      runInAction(() => {
+        this.isLoading = false;
+      });
+    }
+  }
+
+  // ── Add Item ──────────────────────────────────────────────
+  async addItem(productId, variantId = null, quantity = 1) {
+    this.isLoading = true;
+    try {
+      const res = await cartAPI.addItem({
+        product_id: productId,
+        variant_id: variantId,
+        quantity,
+      });
+      runInAction(() => {
+        this.cart = res.data.data;
+        this.isOpen = true; // افتح الـ drawer
+      });
+      message.success("تمت الإضافة للسلة ✓");
+      return { success: true };
+    } catch (err) {
+      const msg = err.response?.data?.message || "فشلت الإضافة.";
+      message.error(msg);
+      return { success: false };
+    } finally {
+      runInAction(() => {
+        this.isLoading = false;
+      });
+    }
+  }
+
+  // ── Update Item ───────────────────────────────────────────
+  async updateItem(itemId, quantity) {
+    try {
+      const res = await cartAPI.updateItem(itemId, { quantity });
+      runInAction(() => {
+        this.cart = res.data.data;
+      });
+    } catch (err) {
+      message.error(err.response?.data?.message || "فشل التحديث.");
+    }
+  }
+
+  // ── Remove Item ───────────────────────────────────────────
+  async removeItem(itemId) {
+    try {
+      const res = await cartAPI.removeItem(itemId);
+      runInAction(() => {
+        this.cart = res.data.data;
+      });
+      message.success("تم حذف المنتج من السلة.");
+    } catch {
+      message.error("فشل الحذف.");
+    }
+  }
+
+  // ── Clear Cart ────────────────────────────────────────────
+  async clearCart() {
+    try {
+      await cartAPI.clearCart();
+      runInAction(() => {
+        this.cart = { ...this.cart, items: [], total_items: 0, subtotal: 0 };
+      });
+    } catch {}
+  }
+
+  // ── Drawer Control ────────────────────────────────────────
+  openDrawer() {
+    this.isOpen = true;
+  }
+  closeDrawer() {
+    this.isOpen = false;
+  }
+}
+
+export default new CartStore();
