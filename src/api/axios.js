@@ -7,7 +7,7 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  withCredentials: true, // ← هنا
+  withCredentials:false, // ← هنا
 });
 
 // ── Request Interceptor: ضيف الـ Token تلقائياً ──────────────
