@@ -2,8 +2,8 @@ import axios from "axios";
 
 const api = axios.create({
   baseURL:
-    "https://onlinestore-production-d7b2.up.railway.app/onlinestore" ||
-    "http://localhost:8000/onlinestore",
+    "https://onlinestore-production-d7b2.up.railway.app/" ||
+    "http://localhost:8000/",
   headers: {
     "Content-Type": "application/json",
   },
