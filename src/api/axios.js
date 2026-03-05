@@ -1,7 +1,9 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || "http://localhost:8000/onlinestore",
+  baseURL:
+    "https://onlinestore-production-d7b2.up.railway.app/onlinestore" ||
+    "http://localhost:8000/onlinestore",
   headers: {
     "Content-Type": "application/json",
   },
