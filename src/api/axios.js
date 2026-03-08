@@ -1,13 +1,11 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL:
-    "https://onlinestore-production-d7b2.up.railway.app/" ||
-    "http://localhost:8000/",
+  baseURL: process.env.REACT_APP_API_URL + "/api/store",
   headers: {
     "Content-Type": "application/json",
   },
-  withCredentials:false, // ← هنا
+  withCredentials: false, // ← هنا
 });
 
 // ── Request Interceptor: ضيف الـ Token تلقائياً ──────────────
@@ -34,10 +32,7 @@ api.interceptors.response.use(
 
       if (refresh) {
         try {
-          const res = await axios.post(
-            `${process.env.REACT_APP_API_URL}/auth/token/refresh/`,
-            { refresh }
-          );
+          const res = await api.post("/auth/token/refresh/", { refresh });
           const newAccess = res.data.access;
           localStorage.setItem("access_token", newAccess);
           original.headers.Authorization = `Bearer ${newAccess}`;
