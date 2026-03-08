@@ -18,5 +18,4 @@ module.exports = {
   },
   plugins: [],
   // ❌ شيل السطر ده
-  // corePlugins: { preflight: false },
 };
