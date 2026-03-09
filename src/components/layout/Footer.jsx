@@ -43,8 +43,7 @@ const Footer = () => {
           <Col xs={12} md={8}>
             <h4 className="text-white font-semibold mb-3">تواصل معنا</h4>
             <div className="flex flex-col gap-2">
-              <Text style={{ color: "#94a3b8" }}>info@store.com</Text>
-              <Text style={{ color: "#94a3b8" }}>+20 100 000 0000</Text>
+              <Text style={{ color: "#94a3b8" }}>+20 1026002193</Text>
             </div>
           </Col>
         </Row>
