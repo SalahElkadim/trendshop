@@ -28,6 +28,8 @@ import LoginPage from "./pages/Auth/LoginPage";
 import RegisterPage from "./pages/Auth/RegisterPage";
 import AccountPage from "./pages/Account/AccountPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import AboutUs from "./pages/AboutUs";
+
 import { initPixel, pageView } from "./utils/pixel"; // ← جديد
 
 
@@ -70,6 +72,7 @@ const App = observer(() => {
         <Route path="/" element={<MainLayout />}>
           {/* Public */}
           <Route index element={<HomePage />} />
+          <Route path="/about" element={<AboutUs />} />
           <Route path="products" element={<ProductListPage />} />
           <Route path="products/:slug" element={<ProductDetailPage />} />
           <Route path="cart" element={<CartPage />} />

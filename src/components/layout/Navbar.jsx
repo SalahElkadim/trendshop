@@ -70,6 +70,12 @@ const Navbar = observer(() => {
           >
             المنتجات
           </Link>
+          <Link
+            to="/about"
+            className="text-slate-600 hover:text-indigo-600 no-underline font-medium"
+          >
+            من نحن
+          </Link>
         </nav>
 
         {/* Actions */}
