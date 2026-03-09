@@ -9,10 +9,9 @@ import {
 } from "@ant-design/icons";
 
 const stats = [
-  { value: "+١٠٠٠", label: "عميل سعيد" },
-  { value: "+٥٠٠", label: "منتج متاح" },
-  { value: "٥", label: "سنوات خبرة" },
-  { value: "٢٤/٧", label: "دعم فني" },
+  { value: "+1000", label: "عميل سعيد" },
+  { value: "+500", label: "منتج متاح" },
+  { value: "24/7", label: "دعم فني" },
 ];
 
 const values = [
@@ -239,7 +238,7 @@ const AboutUs = () => {
                 margin: "0 0 16px",
               }}
             >
-              تأسسنا عام ٢٠١٩ بهدف واحد واضح: تغيير طريقة التسوق الإلكتروني في
+              تأسسنا بهدف واحد واضح: تغيير طريقة التسوق الإلكتروني في
               العالم العربي. نحن لا نبيع منتجات فحسب، بل نبني علاقات قائمة على
               الثقة والشفافية مع كل عميل.
             </p>
@@ -360,71 +359,7 @@ const AboutUs = () => {
         </div>
       </section>
 
-      {/* Team */}
-      <section style={{ padding: "64px 24px" }}>
-        <div style={{ maxWidth: 700, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: 48 }}>
-            <span
-              style={{
-                color: "#6366f1",
-                fontWeight: 700,
-                fontSize: 13,
-                letterSpacing: 2,
-              }}
-            >
-              خلف الكواليس
-            </span>
-            <h2
-              style={{
-                fontSize: "clamp(1.5rem, 3vw, 2.2rem)",
-                fontWeight: 900,
-                color: "#0f172a",
-                margin: "12px 0 0",
-              }}
-            >
-              فريق العمل
-            </h2>
-          </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-              gap: 24,
-            }}
-          >
-            {team.map((member) => (
-              <div key={member.name} style={{ textAlign: "center" }}>
-                <div
-                  style={{
-                    width: 80,
-                    height: 80,
-                    borderRadius: "50%",
-                    background: "linear-gradient(135deg, #6366f1, #4f46e5)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    margin: "0 auto 16px",
-                    fontSize: 24,
-                    fontWeight: 900,
-                    color: "#fff",
-                  }}
-                >
-                  {member.initials}
-                </div>
-                <div
-                  style={{ fontWeight: 800, color: "#0f172a", fontSize: 16 }}
-                >
-                  {member.name}
-                </div>
-                <div style={{ color: "#6366f1", fontSize: 13, marginTop: 4 }}>
-                  {member.role}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
+      
       {/* CTA */}
       <section
         style={{
