@@ -12,7 +12,7 @@ const OrderSuccessPage = () => {
   useEffect(() => {
     const fetchOrderAndTrack = async () => {
       try {
-        const res = await ordersAPI.getByOrderNumber(orderNumber);
+        const res = await ordersAPI.getOrder(orderNumber);
         const order = res.data.data;
         setOrderData(order);
 
