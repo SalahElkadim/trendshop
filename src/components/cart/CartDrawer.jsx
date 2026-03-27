@@ -99,7 +99,9 @@ const CartDrawer = observer(() => {
                     value={item.quantity}
                     size="small"
                     style={{ width: 70 }}
-                    onChange={(val) => cartStore.updateItem(item.id, val)}
+                    onChange={(val) =>
+                      val && cartStore.updateItem(item.id, val)
+                    }
                   />
                   <Text strong style={{ color: "#6366f1" }}>
                     {Number(item.subtotal).toLocaleString()} ج.م

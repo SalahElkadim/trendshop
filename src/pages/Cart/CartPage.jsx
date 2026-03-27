@@ -74,7 +74,7 @@ const CartPage = observer(() => {
         <InputNumber
           min={1}
           value={item.quantity}
-          onChange={(val) => cartStore.updateItem(item.id, val)}
+          onChange={(val) => val && cartStore.updateItem(item.id, val)}
           style={{ width: 80 }}
         />
       ),
