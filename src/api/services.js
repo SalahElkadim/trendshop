@@ -26,9 +26,18 @@ export const productsAPI = {
 export const cartAPI = {
   getCart: () => api.get("/cart/"),
   addItem: (data) => api.post("/cart/add/", data),
-  updateItem: (id, data) => api.patch(`/cart/items/${id}/`, data),
-  removeItem: (id) => api.delete(`/cart/items/${id}/`),
-  clearCart: () => api.delete("/cart/clear/"),
+  updateItem: (itemId, data) =>
+    api.patch(`/store/cart/items/${itemId}/`, data, {
+      params: { cart_id: cartStore.cart?.id }, // ← ضيف دا
+    }),
+  removeItem: (itemId, cartId) =>
+    api.delete(`/store/cart/items/${itemId}/`, {
+      params: { cart_id: cartId },
+    }),
+  clearCart: (cartId) =>
+    api.delete("/store/cart/clear/", {
+      params: { cart_id: cartId },
+    }),
 };
 
 // ── Checkout & Orders ─────────────────────────────────────────

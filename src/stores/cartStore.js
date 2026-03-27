@@ -69,7 +69,7 @@ class CartStore {
   // ── Update Item ───────────────────────────────────────────
   async updateItem(itemId, quantity) {
     try {
-      const res = await cartAPI.updateItem(itemId, { quantity });
+      const res = await cartAPI.updateItem(itemId, { quantity }, this.cart?.id);
       runInAction(() => {
         this.cart = res.data.data;
       });
@@ -78,10 +78,9 @@ class CartStore {
     }
   }
 
-  // ── Remove Item ───────────────────────────────────────────
   async removeItem(itemId) {
     try {
-      const res = await cartAPI.removeItem(itemId);
+      const res = await cartAPI.removeItem(itemId, this.cart?.id);
       runInAction(() => {
         this.cart = res.data.data;
       });
@@ -91,10 +90,9 @@ class CartStore {
     }
   }
 
-  // ── Clear Cart ────────────────────────────────────────────
   async clearCart() {
     try {
-      await cartAPI.clearCart();
+      await cartAPI.clearCart(this.cart?.id);
       runInAction(() => {
         this.cart = { ...this.cart, items: [], total_items: 0, subtotal: 0 };
       });
