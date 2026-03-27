@@ -7,7 +7,7 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  withCredentials: false,
+  withCredentials: true, // ← ده بيبعت الـ session cookie مع كل request
 });
 
 // ── Request Interceptor ──────────────────────────────────────
