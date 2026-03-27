@@ -74,6 +74,8 @@ class CartStore {
         this.cart = res.data.data;
       });
     } catch (err) {
+      console.log("cart id:", this.cart?.id);
+      console.log("error response:", err.response?.data);
       message.error(err.response?.data?.message || "فشل التحديث.");
     }
   }
