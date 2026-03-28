@@ -27,15 +27,15 @@ export const cartAPI = {
   getCart: (params = {}) => api.get("/cart/", { params }),
   addItem: (data) => api.post("/cart/add/", data),
   updateItem: (itemId, data) =>
-    api.patch(`/store/cart/items/${itemId}/`, data, {
-      params: { cart_id: cartStore.cart?.id }, // ← ضيف دا
+    api.patch(`/cart/items/${itemId}/`, data, {
+      params: { cart_id: cartStore.cart?.id },
     }),
   removeItem: (itemId, cartId) =>
-    api.delete(`/store/cart/items/${itemId}/`, {
+    api.delete(`/cart/items/${itemId}/`, {
       params: { cart_id: cartId },
     }),
   clearCart: (cartId) =>
-    api.delete("/store/cart/clear/", {
+    api.delete("/cart/clear/", {
       params: { cart_id: cartId },
     }),
 };
