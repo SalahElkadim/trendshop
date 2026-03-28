@@ -30,21 +30,23 @@ import AccountPage from "./pages/Account/AccountPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import AboutUs from "./pages/AboutUs";
 
-import { initPixel, pageView } from "./utils/pixel"; // ← جديد
+import { initPixel, pageView } from "./utils/pixel";
 
-
-// ← كومبوننت مسؤول عن تتبع تغيير الصفحات
+// ← تتبع تغيير الصفحات + ScrollToTop
 const PixelPageTracker = () => {
   const location = useLocation();
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     pageView();
   }, [location.pathname]);
 
   return null;
 };
+
 // Protected Route للصفحات اللي تحتاج login
 const ProtectedRoute = observer(({ children }) => {
+  if (!authStore.isHydrated) return null;
   if (!authStore.isLoggedIn) {
     return <Navigate to="/login" replace />;
   }
@@ -53,6 +55,7 @@ const ProtectedRoute = observer(({ children }) => {
 
 // Guest Route (login/register) → لو مسجل روّح للـ home
 const GuestRoute = observer(({ children }) => {
+  if (!authStore.isHydrated) return null;
   if (authStore.isLoggedIn) {
     return <Navigate to="/" replace />;
   }
@@ -62,7 +65,7 @@ const GuestRoute = observer(({ children }) => {
 const App = observer(() => {
   useEffect(() => {
     cartStore.fetchCart();
-    initPixel(); // ← تشغيل الـ Pixel مرة واحدة عند بدء التطبيق
+    initPixel();
   }, []);
 
   return (
