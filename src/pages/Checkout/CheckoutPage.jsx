@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { observer } from "mobx-react-lite";
+import { runInAction } from "mobx";
 import {
   Form,
   Input,
@@ -115,54 +116,64 @@ const CheckoutPage = observer(() => {
     }
   };
 
-  const handleSubmit = async (values) => {
-    if (cartStore.items.length === 0) {
-      message.error("السلة فارغة!");
-      return;
-    }
-    if (!selectedGov) {
-      message.error("اختر المحافظة أولاً!");
-      return;
-    }
+ const handleSubmit = async (values) => {
+   if (cartStore.items.length === 0) {
+     message.error("السلة فارغة!");
+     return;
+   }
+   if (!selectedGov) {
+     message.error("اختر المحافظة أولاً!");
+     return;
+   }
 
-    setSubmitting(true);
-    try {
-      const items = cartStore.items.map((item) => ({
-        product_id: item.product,
-        variant_id: item.variant || null,
-        quantity: item.quantity,
-      }));
+   setSubmitting(true);
+   try {
+     const items = cartStore.items.map((item) => ({
+       product_id: item.product,
+       variant_id: item.variant || null,
+       quantity: item.quantity,
+     }));
 
-      const payload = {
-        ...values,
-        shipping_city: selectedGov,
-        shipping_country: "مصر",
-        payment_method: "cod",
-        coupon_code: couponData?.coupon?.code || "",
-        shipping_cost: shippingCost,
-        items,
-      };
+     const payload = {
+       ...values,
+       shipping_city: selectedGov,
+       shipping_country: "مصر",
+       payment_method: "cod",
+       coupon_code: couponData?.coupon?.code || "",
+       shipping_cost: shippingCost,
+       items,
+     };
 
-      if (!authStore.isLoggedIn) {
-        payload.guest_email = values.guest_email;
-      }
+     if (!authStore.isLoggedIn) {
+       payload.guest_email = values.guest_email;
+     }
 
-      const res = await ordersAPI.checkout(payload);
-      const order = res.data.data;
-      await cartStore.clearCart();
-      localStorage.removeItem("guest_cart_id");
-      navigate(`/order-success/${order.order_number}`);
-    } catch (err) {
-      const errors = err.response?.data?.errors;
-      if (errors) {
-        message.error(JSON.stringify(errors));
-      } else {
-        message.error(err.response?.data?.message || "فشل إتمام الطلب.");
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
+     const res = await ordersAPI.checkout(payload);
+     const order = res.data.data;
+
+     // ← امسح السلة من الـ state مباشرة بدون API call
+     runInAction(() => {
+       cartStore.cart = {
+         ...cartStore.cart,
+         items: [],
+         total_items: 0,
+         subtotal: 0,
+       };
+     });
+     localStorage.removeItem("guest_cart_id");
+
+     navigate(`/order-success/${order.order_number}`);
+   } catch (err) {
+     const errors = err.response?.data?.errors;
+     if (errors) {
+       message.error(JSON.stringify(errors));
+     } else {
+       message.error(err.response?.data?.message || "فشل إتمام الطلب.");
+     }
+   } finally {
+     setSubmitting(false);
+   }
+ };
 
   const shippingLabel = getShippingLabel(shippingCost);
 
