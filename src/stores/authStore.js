@@ -58,6 +58,7 @@ class AuthStore {
       const res = await authAPI.login(data);
       const { access, refresh, user } = res.data.data;
       this._setSession(access, refresh, user);
+      localStorage.removeItem("guest_cart_id"); // ← ضيف ده بس
       return { success: true };
     } catch (err) {
       runInAction(() => {

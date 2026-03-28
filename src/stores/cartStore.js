@@ -27,9 +27,13 @@ class CartStore {
   async fetchCart() {
     this.isLoading = true;
     try {
-      const res = await cartAPI.getCart();
+      const cartId = this.cart?.id || localStorage.getItem("guest_cart_id");
+      const res = await cartAPI.getCart(cartId ? { cart_id: cartId } : {});
       runInAction(() => {
         this.cart = res.data.data;
+        if (res.data.data?.id) {
+          localStorage.setItem("guest_cart_id", res.data.data.id);
+        }
       });
     } catch {
       // silent fail للـ guest
@@ -44,14 +48,19 @@ class CartStore {
   async addItem(productId, variantId = null, quantity = 1) {
     this.isLoading = true;
     try {
+      const cartId = this.cart?.id || localStorage.getItem("guest_cart_id");
       const res = await cartAPI.addItem({
         product_id: productId,
         variant_id: variantId,
         quantity,
+        cart_id: cartId ? parseInt(cartId) : null,
       });
       runInAction(() => {
         this.cart = res.data.data;
-        this.isOpen = true; // افتح الـ drawer
+        if (res.data.data?.id) {
+          localStorage.setItem("guest_cart_id", res.data.data.id);
+        }
+        this.isOpen = true;
       });
       message.success("تمت الإضافة للسلة ✓");
       return { success: true };
