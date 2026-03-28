@@ -26,10 +26,20 @@ export const productsAPI = {
 export const cartAPI = {
   getCart: (params = {}) => api.get("/cart/", { params }),
   addItem: (data) => api.post("/cart/add/", data),
-  updateItem: (itemId, data) =>
-    api.patch(`/cart/items/${itemId}/`, data, {
-      params: { cart_id: cartStore.cart?.id },
-    }),
+  async updateItem(itemId, quantity) {
+    try {
+      console.log("sending update:", itemId, quantity, this.cart?.id); // ← ضيف ده
+      const res = await cartAPI.updateItem(itemId, { quantity }, this.cart?.id);
+      runInAction(() => {
+        this.cart = res.data.data;
+      });
+    } catch (err) {
+      console.log("cart id:", this.cart?.id);
+      console.log("error response:", err.response?.data);
+      console.log("error:", err); // ← ضيف ده كمان
+      message.error(err.response?.data?.message || "فشل التحديث.");
+    }
+  },
   removeItem: (itemId, cartId) =>
     api.delete(`/cart/items/${itemId}/`, {
       params: { cart_id: cartId },
