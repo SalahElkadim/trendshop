@@ -149,6 +149,8 @@ const CheckoutPage = observer(() => {
 
       const res = await ordersAPI.checkout(payload);
       const order = res.data.data;
+      await cartStore.clearCart();
+      localStorage.removeItem("guest_cart_id");
       navigate(`/order-success/${order.order_number}`);
     } catch (err) {
       const errors = err.response?.data?.errors;
