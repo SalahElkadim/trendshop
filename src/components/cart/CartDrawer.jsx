@@ -102,6 +102,11 @@ const CartDrawer = observer(() => {
                     onChange={(val) =>
                       val && cartStore.updateItem(item.id, val)
                     }
+                    onBlur={(e) => {
+                      const val = parseInt(e.target.value);
+                      if (val && val !== item.quantity)
+                        cartStore.updateItem(item.id, val);
+                    }}
                   />
                   <Text strong style={{ color: "#6366f1" }}>
                     {Number(item.subtotal).toLocaleString()} ج.م

@@ -74,10 +74,11 @@ const CartPage = observer(() => {
         <InputNumber
           min={1}
           value={item.quantity}
-          onChange={(val) => {
-            console.log("item:", item); // ← شوف إيه اللي فيه
-            console.log("item.id:", item.id);
-            val && cartStore.updateItem(item.id, val);
+          onChange={(val) => val && cartStore.updateItem(item.id, val)}
+          onBlur={(e) => {
+            const val = parseInt(e.target.value);
+            if (val && val !== item.quantity)
+              cartStore.updateItem(item.id, val);
           }}
           style={{ width: 80 }}
         />

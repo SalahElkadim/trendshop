@@ -77,14 +77,13 @@ class CartStore {
 
   // ── Update Item ───────────────────────────────────────────
   async updateItem(itemId, quantity) {
+    if (typeof quantity !== "number") return; // ← منع الـ infinite loop
     try {
-      const res = await cartAPI.updateItem(itemId, { quantity }, this.cart?.id);
+      const res = await cartAPI.updateItem(itemId, quantity, this.cart?.id);
       runInAction(() => {
         this.cart = res.data.data;
       });
     } catch (err) {
-      console.log("cart id:", this.cart?.id);
-      console.log("error response:", err.response?.data);
       message.error(err.response?.data?.message || "فشل التحديث.");
     }
   }
