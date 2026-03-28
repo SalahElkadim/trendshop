@@ -20,7 +20,7 @@ class CartStore {
   }
 
   get items() {
-    return this.cart?.items || [];
+    return (this.cart?.items || []).slice().sort((a, b) => a.id - b.id);
   }
 
   // ── Fetch Cart ────────────────────────────────────────────
