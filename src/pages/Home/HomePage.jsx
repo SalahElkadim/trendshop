@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Row, Col, Button, Spin, Typography, Carousel } from "antd";
+import { Row, Col, Button, Spin, Typography } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { productsAPI, categoriesAPI } from "../../api/services";
 import ProductCard from "../../components/product/ProductCard";
@@ -45,10 +45,37 @@ const HomePage = () => {
         className="flex items-center justify-center text-center px-4"
         style={{
           minHeight: 480,
-          background: "linear-gradient(135deg, #4f46e5 0%, #818cf8 100%)",
+          background:
+            "linear-gradient(135deg, #6366f1 0%, #4f46e5 60%, #3730a3 100%)",
+          position: "relative",
+          overflow: "hidden",
         }}
       >
-        <div>
+        {/* Decorative circles */}
+        <div
+          style={{
+            position: "absolute",
+            top: -60,
+            right: -60,
+            width: 220,
+            height: 220,
+            borderRadius: "50%",
+            background: "rgba(255,255,255,0.08)",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            bottom: -40,
+            left: -40,
+            width: 160,
+            height: 160,
+            borderRadius: "50%",
+            background: "rgba(255,255,255,0.06)",
+          }}
+        />
+
+        <div style={{ position: "relative" }}>
           <Title style={{ color: "#fff", fontSize: 42, marginBottom: 16 }}>
             أهلاً بك في {process.env.REACT_APP_NAME || "متجري"}
           </Title>
