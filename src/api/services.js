@@ -24,7 +24,7 @@ export const productsAPI = {
 
 // ── Cart ──────────────────────────────────────────────────────
 export const cartAPI = {
-  getCart: () => api.get("/cart/"),
+  getCart: (params = {}) => api.get("/cart/", { params }),
   addItem: (data) => api.post("/cart/add/", data),
   updateItem: (itemId, data) =>
     api.patch(`/store/cart/items/${itemId}/`, data, {
