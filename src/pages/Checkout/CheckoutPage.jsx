@@ -201,7 +201,7 @@ const CheckoutPage = observer(() => {
                   <Form.Item
                     name="guest_email"
                     label="البريد الإلكتروني"
-                    rules={[{ required: true, type: "email" }]}
+                    rules={[{ type: "email" }]}
                   >
                     <Input placeholder="example@email.com" />
                   </Form.Item>
