@@ -116,64 +116,63 @@ const CheckoutPage = observer(() => {
     }
   };
 
- const handleSubmit = async (values) => {
-   if (cartStore.items.length === 0) {
-     message.error("السلة فارغة!");
-     return;
-   }
-   if (!selectedGov) {
-     message.error("اختر المحافظة أولاً!");
-     return;
-   }
+  const handleSubmit = async (values) => {
+    if (cartStore.items.length === 0) {
+      message.error("السلة فارغة!");
+      return;
+    }
+    if (!selectedGov) {
+      message.error("اختر المحافظة أولاً!");
+      return;
+    }
 
-   setSubmitting(true);
-   try {
-     const items = cartStore.items.map((item) => ({
-       product_id: item.product,
-       variant_id: item.variant || null,
-       quantity: item.quantity,
-     }));
+    setSubmitting(true);
+    try {
+      const items = cartStore.items.map((item) => ({
+        product_id: item.product,
+        variant_id: item.variant || null,
+        quantity: item.quantity,
+      }));
 
-     const payload = {
-       ...values,
-       shipping_city: selectedGov,
-       shipping_country: "مصر",
-       payment_method: "cod",
-       coupon_code: couponData?.coupon?.code || "",
-       shipping_cost: shippingCost,
-       items,
-     };
+      const payload = {
+        ...values,
+        shipping_city: selectedGov,
+        shipping_country: "مصر",
+        payment_method: "cod",
+        coupon_code: couponData?.coupon?.code || "",
+        shipping_cost: shippingCost,
+        items,
+      };
 
-     if (!authStore.isLoggedIn) {
-       payload.guest_email = values.guest_email;
-     }
+      if (!authStore.isLoggedIn) {
+        payload.guest_email = values.guest_email;
+      }
 
-     const res = await ordersAPI.checkout(payload);
-     const order = res.data.data;
+      const res = await ordersAPI.checkout(payload);
+      const order = res.data.data;
 
-     // ← امسح السلة من الـ state مباشرة بدون API call
-     runInAction(() => {
-       cartStore.cart = {
-         ...cartStore.cart,
-         items: [],
-         total_items: 0,
-         subtotal: 0,
-       };
-     });
-     localStorage.removeItem("guest_cart_id");
+      runInAction(() => {
+        cartStore.cart = {
+          ...cartStore.cart,
+          items: [],
+          total_items: 0,
+          subtotal: 0,
+        };
+      });
+      localStorage.removeItem("guest_cart_id");
 
-     navigate(`/order-success/${order.order_number}`);
-   } catch (err) {
-     const errors = err.response?.data?.errors;
-     if (errors) {
-       message.error(JSON.stringify(errors));
-     } else {
-       message.error(err.response?.data?.message || "فشل إتمام الطلب.");
-     }
-   } finally {
-     setSubmitting(false);
-   }
- };
+      navigate(`/order-success/${order.order_number}`);
+    } catch (err) {
+      const errors = err.response?.data?.errors;
+      if (errors) {
+        message.error(JSON.stringify(errors));
+      } else {
+        message.error(err.response?.data?.message || "فشل إتمام الطلب.");
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const shippingLabel = getShippingLabel(shippingCost);
 
@@ -188,57 +187,42 @@ const CheckoutPage = observer(() => {
         <Col xs={24} lg={14}>
           <Card title="بيانات الشحن" className="mb-6">
             <Form form={form} layout="vertical" onFinish={handleSubmit}>
-              {/* Guest */}
+              {/* Guest alert */}
               {!authStore.isLoggedIn && (
-                <>
-                  <Alert
-                    message="أنت تتسوق كضيف"
-                    description="يمكنك التسجيل لاحقاً لمتابعة طلباتك."
-                    type="info"
-                    showIcon
-                    className="mb-4"
-                  />
-                  <Form.Item
-                    name="guest_email"
-                    label="البريد الإلكتروني"
-                    rules={[{ type: "email" }]}
-                  >
-                    <Input placeholder="example@email.com" />
-                  </Form.Item>
-                </>
+                <Alert
+                  message="أنت تتسوق كضيف"
+                  description="يمكنك التسجيل لاحقاً لمتابعة طلباتك."
+                  type="info"
+                  showIcon
+                  className="mb-4"
+                />
               )}
 
-              <Row gutter={16}>
-                <Col xs={24} sm={12}>
-                  <Form.Item
-                    name="shipping_name"
-                    label="الاسم الكامل"
-                    rules={[{ required: true }]}
-                  >
-                    <Input placeholder="محمد أحمد" />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <Form.Item
-                    name="shipping_phone"
-                    label="رقم الهاتف"
-                    rules={[{ required: true }]}
-                  >
-                    <Input placeholder="01xxxxxxxxx" />
-                  </Form.Item>
-                </Col>
-              </Row>
-
+              {/* 1. الاسم */}
               <Form.Item
-                name="shipping_address"
-                label="العنوان"
-                rules={[{ required: true }]}
+                name="shipping_name"
+                label="الاسم الكامل"
+                rules={[{ required: true, message: "أدخل الاسم الكامل" }]}
               >
-                <Input placeholder="الشارع، رقم المبنى، الشقة" />
+                <Input placeholder="محمد أحمد" />
               </Form.Item>
 
+              {/* 2. رقم التليفون */}
+              <Form.Item
+                name="shipping_phone"
+                label="رقم الهاتف"
+                rules={[{ required: true, message: "أدخل رقم الهاتف" }]}
+              >
+                <Input placeholder="01xxxxxxxxx" />
+              </Form.Item>
+
+              {/* 3. الدولة + 4. المحافظة — في صف واحد */}
               <Row gutter={16}>
-                {/* المحافظة */}
+                <Col xs={24} sm={12}>
+                  <Form.Item name="shipping_country" label="الدولة">
+                    <Input value="مصر" defaultValue="مصر" disabled />
+                  </Form.Item>
+                </Col>
                 <Col xs={24} sm={12}>
                   <Form.Item
                     name="shipping_city"
@@ -261,16 +245,9 @@ const CheckoutPage = observer(() => {
                     </Select>
                   </Form.Item>
                 </Col>
-
-                {/* الدولة ثابتة */}
-                <Col xs={24} sm={12}>
-                  <Form.Item name="shipping_country" label="الدولة">
-                    <Input value="مصر" defaultValue="مصر" disabled />
-                  </Form.Item>
-                </Col>
               </Row>
 
-              {/* تكلفة الشحن للمحافظة المختارة */}
+              {/* بنر تكلفة الشحن */}
               {selectedGov && (
                 <div
                   style={{
@@ -316,10 +293,34 @@ const CheckoutPage = observer(() => {
                 </div>
               )}
 
+              {/* 5. العنوان بالتفصيل */}
+              <Form.Item
+                name="shipping_address"
+                label="العنوان بالتفصيل"
+                rules={[{ required: true, message: "أدخل العنوان" }]}
+              >
+                <Input placeholder="الشارع، رقم المبنى، الشقة" />
+              </Form.Item>
+
+              {/* 6. الإيميل — للجميع (اختياري للضيف) */}
+              <Form.Item
+                name="guest_email"
+                label={
+                  authStore.isLoggedIn
+                    ? "البريد الإلكتروني (اختياري)"
+                    : "البريد الإلكتروني (اختياري)"
+                }
+                rules={[{ type: "email", message: "أدخل بريد إلكتروني صحيح" }]}
+              >
+                <Input placeholder="example@email.com" />
+              </Form.Item>
+
+              {/* الكود البريدي */}
               <Form.Item name="shipping_postal_code" label="الكود البريدي">
                 <Input placeholder="اختياري" />
               </Form.Item>
 
+              {/* 8. الملاحظات */}
               <Form.Item name="notes" label="ملاحظات">
                 <Input.TextArea
                   rows={3}
@@ -394,7 +395,7 @@ const CheckoutPage = observer(() => {
 
             <Divider />
 
-            {/* Coupon */}
+            {/* 7. كود الخصم */}
             <div className="mb-4">
               <Text strong className="block mb-2">
                 كود الخصم
@@ -455,7 +456,6 @@ const CheckoutPage = observer(() => {
                 </Title>
               </div>
 
-              {/* ملاحظة الشحن */}
               {!selectedGov && (
                 <Text
                   type="secondary"
