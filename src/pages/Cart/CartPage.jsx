@@ -12,15 +12,104 @@ import {
 } from "antd";
 import { DeleteOutlined, ShoppingOutlined } from "@ant-design/icons";
 import cartStore from "../../stores/cartStore";
-import { trackEvent } from "../../utils/pixel"; // ← جديد
+import { trackEvent } from "../../utils/pixel";
 
 const { Title, Text } = Typography;
+
+// ✅ كارد منتج للموبايل
+const MobileCartItem = ({ item }) => (
+  <div
+    style={{
+      display: "flex",
+      gap: 12,
+      padding: "12px 0",
+      borderBottom: "1px solid #f0f0f0",
+      alignItems: "flex-start",
+    }}
+  >
+    <img
+      src={item.primary_image || "/placeholder.png"}
+      alt={item.product_name}
+      style={{
+        width: 70,
+        height: 70,
+        objectFit: "cover",
+        borderRadius: 8,
+        flexShrink: 0,
+      }}
+    />
+    <div style={{ flex: 1, minWidth: 0 }}>
+      {/* اسم المنتج مع word-break لمنع التكدس */}
+      <Text
+        strong
+        style={{
+          display: "block",
+          wordBreak: "break-word",
+          overflowWrap: "break-word",
+          whiteSpace: "normal",
+          lineHeight: 1.4,
+          marginBottom: 2,
+        }}
+      >
+        {item.product_name}
+      </Text>
+
+      {item.variant_label && (
+        <Text
+          type="secondary"
+          style={{ fontSize: 12, display: "block", marginBottom: 6 }}
+        >
+          {item.variant_label}
+        </Text>
+      )}
+
+      <Text
+        type="secondary"
+        style={{ fontSize: 12, display: "block", marginBottom: 8 }}
+      >
+        {Number(item.unit_price).toLocaleString()} ج.م / القطعة
+      </Text>
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <InputNumber
+            min={1}
+            value={item.quantity}
+            onChange={(val) => val && cartStore.updateItem(item.id, val)}
+            onBlur={(e) => {
+              const val = parseInt(e.target.value);
+              if (val && val !== item.quantity)
+                cartStore.updateItem(item.id, val);
+            }}
+            style={{ width: 75 }}
+            size="small"
+          />
+          <Text strong style={{ color: "#6366f1" }}>
+            {Number(item.subtotal).toLocaleString()} ج.م
+          </Text>
+        </div>
+        <Button
+          type="text"
+          danger
+          size="small"
+          icon={<DeleteOutlined />}
+          onClick={() => cartStore.removeItem(item.id)}
+        />
+      </div>
+    </div>
+  </div>
+);
 
 const CartPage = observer(() => {
   const navigate = useNavigate();
 
   const handleCheckout = () => {
-    // ✅ تتبع بدء عملية الشراء
     trackEvent("InitiateCheckout", {
       content_ids: cartStore.items.map(
         (item) => item.product_id?.toString() || item.id.toString()
@@ -48,9 +137,17 @@ const CartPage = observer(() => {
             src={item.primary_image || "/placeholder.png"}
             alt={item.product_name}
             className="w-14 h-14 object-cover rounded-lg"
+            style={{ flexShrink: 0 }}
           />
-          <div>
-            <Text strong className="block">
+          <div style={{ minWidth: 0 }}>
+            <Text
+              strong
+              style={{
+                display: "block",
+                wordBreak: "break-word",
+                whiteSpace: "normal",
+              }}
+            >
               {item.product_name}
             </Text>
             {item.variant_label && (
@@ -133,16 +230,28 @@ const CartPage = observer(() => {
         سلة التسوق ({cartStore.itemsCount} منتج)
       </Title>
 
-      <Table
-        columns={columns}
-        dataSource={cartStore.items}
-        rowKey="id"
-        pagination={false}
-        scroll={{ x: true }}
-      />
+      {/* ✅ جدول للديسكتوب — مخفي على الموبايل */}
+      <div className="hidden sm:block">
+        <Table
+          columns={columns}
+          dataSource={cartStore.items}
+          rowKey="id"
+          pagination={false}
+          scroll={{ x: true }}
+        />
+      </div>
+
+      {/* ✅ كاردات للموبايل — مخفية على الديسكتوب */}
+      <div className="block sm:hidden">
+        <Card bodyStyle={{ padding: "0 12px" }}>
+          {cartStore.items.map((item) => (
+            <MobileCartItem key={item.id} item={item} />
+          ))}
+        </Card>
+      </div>
 
       <div className="flex justify-end mt-6">
-        <Card style={{ minWidth: 300 }}>
+        <Card style={{ minWidth: 300, width: "100%" }} className="sm:w-auto">
           <div className="flex justify-between mb-3">
             <Text>الإجمالي الفرعي:</Text>
             <Text strong>
@@ -150,12 +259,7 @@ const CartPage = observer(() => {
             </Text>
           </div>
           <Divider style={{ margin: "12px 0" }} />
-          <Button
-            type="primary"
-            block
-            size="large"
-            onClick={handleCheckout} // ← معدّل
-          >
+          <Button type="primary" block size="large" onClick={handleCheckout}>
             إتمام الشراء
           </Button>
           <Button block className="mt-2" onClick={() => cartStore.clearCart()}>
