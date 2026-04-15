@@ -7,7 +7,6 @@ import {
   Button,
   Rate,
   Tag,
-  Select,
   InputNumber,
   Spin,
   Typography,
@@ -22,22 +21,30 @@ import { ShoppingCartOutlined } from "@ant-design/icons";
 import { productsAPI, reviewsAPI } from "../../api/services";
 import cartStore from "../../stores/cartStore";
 import authStore from "../../stores/authStore";
-import { trackEvent } from "../../utils/pixel"; // ← جديد
+import { trackEvent } from "../../utils/pixel";
 
 const { Title, Text } = Typography;
 
 const ProductDetailPage = observer(() => {
   const { slug } = useParams();
   const [product, setProduct] = useState(null);
+
+  // ── الاختيارات الجديدة ──
+  // { "اللون": { id: 1, value: "أحمر" }, "المقاس": { id: 3, value: "L" } }
+  const [selectedAttrs, setSelectedAttrs] = useState({});
+  // الـ variant object الكامل اللي بييجي من /find-variant/
   const [selectedVariant, setSelectedVariant] = useState(null);
+  const [variantLoading, setVariantLoading] = useState(false);
+
   const [quantity, setQuantity] = useState(1);
   const [mainImage, setMainImage] = useState(null);
   const [mainVideo, setMainVideo] = useState(null);
-  const [mediaType, setMediaType] = useState("image"); // "image" | "video"
+  const [mediaType, setMediaType] = useState("image");
   const [loading, setLoading] = useState(true);
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewForm] = Form.useForm();
 
+  // ── تحميل المنتج ──
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -45,13 +52,13 @@ const ProductDetailPage = observer(() => {
         const res = await productsAPI.getBySlug(slug);
         const p = res.data.data;
         setProduct(p);
-        console.log("videos:", p.videos);
         setMainImage(
           p.images?.find((i) => i.is_primary)?.image || p.images?.[0]?.image
         );
         setMediaType("image");
-        const firstAvailable = p.variants?.find((v) => !v.is_out_of_stock);
-        if (firstAvailable) setSelectedVariant(firstAvailable.id);
+        // reset الاختيارات لما المنتج يتغير
+        setSelectedAttrs({});
+        setSelectedVariant(null);
         trackEvent("ViewContent", {
           content_name: p.name,
           content_ids: [p.id.toString()],
@@ -67,12 +74,50 @@ const ProductDetailPage = observer(() => {
     load();
   }, [slug]);
 
-  const handleAddToCart = () => {
-    const selectedVariantObj = product.variants?.find(
-      (v) => v.id === selectedVariant
+  // ── لما كل الـ attributes تتاختار → دور على الـ variant ──
+  useEffect(() => {
+    if (!product?.available_attributes?.length) return;
+
+    const allSelected = product.available_attributes.every(
+      (attr) => selectedAttrs[attr.attribute]
     );
-    const currentPrice = selectedVariantObj?.effective_price || product.effective_price;
-    // ✅ تتبع الإضافة للسلة
+
+    if (!allSelected) {
+      setSelectedVariant(null);
+      return;
+    }
+
+    const findVariant = async () => {
+      setVariantLoading(true);
+      try {
+        const av_ids = Object.values(selectedAttrs).map((v) => v.id);
+        const res = await productsAPI.findVariant(slug, av_ids);
+        setSelectedVariant(res.data.data);
+      } catch {
+        setSelectedVariant(null);
+      } finally {
+        setVariantLoading(false);
+      }
+    };
+
+    findVariant();
+  }, [selectedAttrs, product, slug]);
+
+  // ── حساب السعر والكمية ──
+  const currentPrice =
+    selectedVariant?.effective_price || product?.effective_price;
+  const maxQty = selectedVariant ? selectedVariant.stock : 99;
+  const isOutOfStock = selectedVariant
+    ? selectedVariant.is_out_of_stock
+    : !product?.is_in_stock;
+
+  // هل المستخدم اختار كل الـ attributes؟
+  const allAttrsSelected =
+    !product?.available_attributes?.length ||
+    product.available_attributes.every((attr) => selectedAttrs[attr.attribute]);
+
+  // ── إضافة للسلة ──
+  const handleAddToCart = () => {
     trackEvent("AddToCart", {
       content_name: product.name,
       content_ids: [product.id.toString()],
@@ -81,7 +126,10 @@ const ProductDetailPage = observer(() => {
       currency: "EGP",
       num_items: quantity,
     });
-    cartStore.addItem(product.id, selectedVariant, quantity);
+    // لو المنتج عنده variants، بعت الـ variant_id اللي اتحدد
+    // لو مفيش variants، بعت null
+    const variantId = selectedVariant?.id ?? null;
+    cartStore.addItem(product.id, variantId, quantity);
   };
 
   const handleSubmitReview = async (values) => {
@@ -111,19 +159,11 @@ const ProductDetailPage = observer(() => {
 
   if (!product) return <Empty description="المنتج غير موجود" />;
 
-  const selectedVariantObj = product.variants?.find(
-    (v) => v.id === selectedVariant
-  );
-  const currentPrice =
-    selectedVariantObj?.effective_price || product.effective_price;
-  const maxQty = selectedVariantObj?.stock || 99;
-
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <Row gutter={[40, 40]}>
         {/* ── الميديا ── */}
         <Col xs={24} md={12}>
-          {/* العرض الرئيسي */}
           <div
             className="bg-white rounded-xl overflow-hidden border border-slate-100 mb-3"
             style={{ height: 420 }}
@@ -149,7 +189,6 @@ const ProductDetailPage = observer(() => {
 
           {/* Thumbnails */}
           <div className="flex gap-2 flex-wrap">
-            {/* صور */}
             {product.images?.map((img) => (
               <div
                 key={img.id}
@@ -171,7 +210,6 @@ const ProductDetailPage = observer(() => {
               </div>
             ))}
 
-            {/* فيديوهات */}
             {product.videos?.map((vid) => (
               <div
                 key={vid.id}
@@ -221,7 +259,7 @@ const ProductDetailPage = observer(() => {
           <Title level={2} style={{ margin: "8px 0" }}>
             {product.name}
           </Title>
-          <text type="secondary">{product.description}</text>
+          <Text type="secondary">{product.description}</Text>
           <br />
           <br />
 
@@ -248,23 +286,60 @@ const ProductDetailPage = observer(() => {
             )}
           </div>
 
-          {/* Variants */}
-          {product.variants?.length > 0 && (
-            <div className="mb-4">
-              <Text strong className="block mb-2">
-                الاختيار:
-              </Text>
-              <Select
-                value={selectedVariant}
-                onChange={setSelectedVariant}
-                style={{ minWidth: 200 }}
-                placeholder="اختر..."
-                options={product.variants.map((v) => ({
-                  value: v.id,
-                  label: v.attribute_values?.map((av) => av.value).join(" / "),
-                  disabled: v.is_out_of_stock,
-                }))}
-              />
+          {/* ── Attribute Selectors (الجديد) ── */}
+          {product.available_attributes?.length > 0 && (
+            <div className="mb-6">
+              {product.available_attributes.map((attr) => (
+                <div key={attr.attribute} className="mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Text strong>{attr.attribute}:</Text>
+                    {selectedAttrs[attr.attribute] && (
+                      <Text type="secondary">
+                        {selectedAttrs[attr.attribute].value}
+                      </Text>
+                    )}
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    {attr.values.map((val) => {
+                      const isSelected =
+                        selectedAttrs[attr.attribute]?.id === val.id;
+                      return (
+                        <button
+                          key={val.id}
+                          onClick={() =>
+                            setSelectedAttrs((prev) => ({
+                              ...prev,
+                              [attr.attribute]: val,
+                            }))
+                          }
+                          style={{
+                            padding: "6px 16px",
+                            borderRadius: 8,
+                            border: isSelected
+                              ? "2px solid #6366f1"
+                              : "1.5px solid #e2e8f0",
+                            background: isSelected ? "#eef2ff" : "transparent",
+                            color: isSelected ? "#4338ca" : "inherit",
+                            fontWeight: isSelected ? 500 : 400,
+                            cursor: "pointer",
+                            fontSize: 14,
+                            transition: "all 0.15s",
+                          }}
+                        >
+                          {val.value}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              {/* رسالة لو اختار كل حاجة بس الـ variant مش موجود */}
+              {allAttrsSelected && !selectedVariant && !variantLoading && (
+                <Text type="danger" style={{ fontSize: 13 }}>
+                  هذا التوليف غير متاح حالياً
+                </Text>
+              )}
             </div>
           )}
 
@@ -273,12 +348,12 @@ const ProductDetailPage = observer(() => {
             <Text strong>الكمية:</Text>
             <InputNumber
               min={1}
-              max={maxQty}
+              max={maxQty || 99}
               value={quantity}
               onChange={setQuantity}
               style={{ width: 100 }}
             />
-            <Text type="secondary">({maxQty} متاح)</Text>
+            {selectedVariant && <Text type="secondary">({maxQty} متاح)</Text>}
           </div>
 
           {/* Add to Cart */}
@@ -287,11 +362,21 @@ const ProductDetailPage = observer(() => {
             size="large"
             block
             icon={<ShoppingCartOutlined />}
-            disabled={!product.is_in_stock}
+            disabled={
+              isOutOfStock ||
+              variantLoading ||
+              (product.available_attributes?.length > 0 && !selectedVariant)
+            }
             onClick={handleAddToCart}
-            loading={cartStore.isLoading}
+            loading={cartStore.isLoading || variantLoading}
           >
-            {product.is_in_stock ? "أضف للسلة" : "نفد المخزون"}
+            {variantLoading
+              ? "جاري التحقق..."
+              : product.available_attributes?.length > 0 && !selectedVariant
+              ? "اختر المواصفات أولاً"
+              : isOutOfStock
+              ? "نفد المخزون"
+              : "أضف للسلة"}
           </Button>
 
           <Divider />

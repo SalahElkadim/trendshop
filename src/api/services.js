@@ -20,6 +20,7 @@ export const categoriesAPI = {
 export const productsAPI = {
   getAll: (params) => api.get("/products/", { params }),
   getBySlug: (slug) => api.get(`/products/${slug}/`),
+  findVariant: (slug, attribute_value_ids) =>api.post(`/products/${slug}/find-variant/`, { attribute_value_ids }),
 };
 
 // ── Cart ──────────────────────────────────────────────────────
