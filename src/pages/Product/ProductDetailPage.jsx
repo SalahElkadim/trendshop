@@ -361,7 +361,7 @@ const ProductDetailPage = observer(() => {
               {product.available_attributes.map((attr) => (
                 <div key={attr.attribute} className="mb-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Text strong>{attr.attribute}:</Text>
+                    <Text strong>اختار {attr.attribute}:</Text>
                     {selectedAttrs[attr.attribute] && (
                       <Text type="secondary">
                         {selectedAttrs[attr.attribute].value}
