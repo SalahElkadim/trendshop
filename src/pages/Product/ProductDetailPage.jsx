@@ -219,6 +219,22 @@ const ProductDetailPage = observer(() => {
                     onClick={() => {
                       setMainImage(img.image);
                       setMediaType("image");
+
+                      // لو الصورة دي مرتبطة بـ attribute value → اختره تلقائياً
+                      if (img.attribute_value) {
+                        const linkedAttr = product.available_attributes?.find(
+                          (attr) =>
+                            attr.values.some(
+                              (v) => v.id === img.attribute_value
+                            )
+                        );
+                        const linkedVal = linkedAttr?.values.find(
+                          (v) => v.id === img.attribute_value
+                        );
+                        if (linkedAttr && linkedVal) {
+                          handleAttrSelect(linkedAttr.attribute, linkedVal);
+                        }
+                      }
                     }}
                     className={`w-16 h-16 rounded-lg border-2 overflow-hidden cursor-pointer transition-all ${
                       isActive ? "border-indigo-500" : "border-slate-200"

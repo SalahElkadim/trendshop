@@ -28,7 +28,7 @@ const MobileCartItem = ({ item }) => (
     }}
   >
     <img
-      src={item.primary_image || "/placeholder.png"}
+      src={item.variant_image || item.primary_image || "/placeholder.png"}
       alt={item.product_name}
       style={{
         width: 70,

@@ -372,7 +372,11 @@ const CheckoutPage = observer(() => {
                 >
                   <div className="flex items-center gap-2">
                     <img
-                      src={item.primary_image || "/placeholder.png"}
+                      src={
+                        item.variant_image ||
+                        item.primary_image ||
+                        "/placeholder.png"
+                      }
                       alt={item.product_name}
                       className="w-10 h-10 rounded object-cover"
                     />
