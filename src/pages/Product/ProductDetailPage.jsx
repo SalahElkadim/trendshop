@@ -154,7 +154,7 @@ const ProductDetailPage = observer(() => {
           )
       )?.image ?? null;
 
-    cartStore.addItem(product.id, variantId, quantity, variantImage);
+    cartStore.addItem(product.id, variantId, quantity);
   };
 
   const handleSubmitReview = async (values) => {

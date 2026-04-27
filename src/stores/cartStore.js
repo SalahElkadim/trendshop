@@ -30,7 +30,7 @@ class CartStore {
       const cartId = this.cart?.id || localStorage.getItem("guest_cart_id");
       const res = await cartAPI.getCart(cartId ? { cart_id: cartId } : {});
       runInAction(() => {
-        this.cart = this._applyVariantImages(res.data.data);
+        this.cart = res.data.data;
         if (res.data.data?.id) {
           localStorage.setItem("guest_cart_id", res.data.data.id);
         }
@@ -64,7 +64,7 @@ class CartStore {
         }
 
         // ✅ طبّق الصور وحط النتيجة مرة واحدة بس
-        this.cart = this._applyVariantImages(res.data.data);
+        this.cart = res.data.data;
 
         if (res.data.data?.id) {
           localStorage.setItem("guest_cart_id", res.data.data.id);
@@ -90,7 +90,7 @@ class CartStore {
     try {
       const res = await cartAPI.updateItem(itemId, quantity, this.cart?.id);
       runInAction(() => {
-        this.cart = this._applyVariantImages(res.data.data);
+        this.cart = res.data.data;
       });
     } catch (err) {
       message.error(err.response?.data?.message || "فشل التحديث.");
@@ -101,7 +101,7 @@ class CartStore {
     try {
       const res = await cartAPI.removeItem(itemId, this.cart?.id);
       runInAction(() => {
-        this.cart = this._applyVariantImages(res.data.data);
+        this.cart = res.data.data;
       });
       message.success("تم حذف المنتج من السلة.");
     } catch {
