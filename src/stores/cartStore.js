@@ -45,12 +45,7 @@ class CartStore {
   }
 
   // ── Add Item ──────────────────────────────────────────────
-  async addItem(
-    productId,
-    variantId = null,
-    quantity = 1,
-    variantImage = null
-  ) {
+  async addItem(productId, variantId = null, quantity = 1, variantImage = null) {
     this.isLoading = true;
     try {
       const cartId = this.cart?.id || localStorage.getItem("guest_cart_id");
@@ -63,9 +58,7 @@ class CartStore {
       runInAction(() => {
         // ✅ احفظ صورة الـ variant في localStorage
         if (variantImage && variantId) {
-          const saved = JSON.parse(
-            localStorage.getItem("variant_images") || "{}"
-          );
+          const saved = JSON.parse(localStorage.getItem("variant_images") || "{}");
           saved[variantId] = variantImage;
           localStorage.setItem("variant_images", JSON.stringify(saved));
         }
@@ -134,19 +127,6 @@ class CartStore {
     this.isOpen = false;
   }
 
-  // ── Helper: طبّق صور الـ variants المحفوظة على الـ cart ──
-  _applyVariantImages(cartData) {
-    if (!cartData?.items) return cartData;
-    const saved = JSON.parse(localStorage.getItem("variant_images") || "{}");
-    return {
-      ...cartData,
-      items: cartData.items.map((item) =>
-        item.variant && saved[item.variant]
-          ? { ...item, variant_image: saved[item.variant] }
-          : item
-      ),
-    };
-  }
 }
 
 export default new CartStore();
