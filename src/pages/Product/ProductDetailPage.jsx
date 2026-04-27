@@ -29,10 +29,7 @@ const ProductDetailPage = observer(() => {
   const { slug } = useParams();
   const [product, setProduct] = useState(null);
 
-  // ── الاختيارات الجديدة ──
-  // { "اللون": { id: 1, value: "أحمر" }, "المقاس": { id: 3, value: "L" } }
   const [selectedAttrs, setSelectedAttrs] = useState({});
-  // الـ variant object الكامل اللي بييجي من /find-variant/
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [variantLoading, setVariantLoading] = useState(false);
 
@@ -44,7 +41,7 @@ const ProductDetailPage = observer(() => {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewForm] = Form.useForm();
 
-  // ── تحميل المنتج ──
+  // ── تحميل المنتج ──────────────────────────────────────────────────────────
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -56,7 +53,6 @@ const ProductDetailPage = observer(() => {
           p.images?.find((i) => i.is_primary)?.image || p.images?.[0]?.image
         );
         setMediaType("image");
-        // reset الاختيارات لما المنتج يتغير
         setSelectedAttrs({});
         setSelectedVariant(null);
         trackEvent("ViewContent", {
@@ -74,7 +70,7 @@ const ProductDetailPage = observer(() => {
     load();
   }, [slug]);
 
-  // ── لما كل الـ attributes تتاختار → دور على الـ variant ──
+  // ── لما كل الـ attributes تتاختار → دور على الـ variant ──────────────────
   useEffect(() => {
     if (!product?.available_attributes?.length) return;
 
@@ -103,7 +99,27 @@ const ProductDetailPage = observer(() => {
     findVariant();
   }, [selectedAttrs, product, slug]);
 
-  // ── حساب السعر والكمية ──
+  // ── ✦ لما يتغير الـ selected attribute value → غيّر الصورة لو في صورة مرتبطة
+  // product.images كل صورة عندها attribute_value (id أو null)
+  // لما اليوزر يختار قيمة → نشوف لو في صورة عندها attribute_value == val.id
+  const handleAttrSelect = (attrName, val) => {
+    setSelectedAttrs((prev) => ({ ...prev, [attrName]: val }));
+
+    if (!product?.images) return;
+
+    // دور على صورة مرتبطة بالـ attribute value ده
+    const linkedImage = product.images.find(
+      (img) => img.attribute_value === val.id
+    );
+
+    if (linkedImage) {
+      setMainImage(linkedImage.image);
+      setMediaType("image");
+    }
+    // لو مفيش صورة مرتبطة → فضّل على الصورة الحالية (مش بنغير حاجة)
+  };
+
+  // ── حساب السعر والكمية ──────────────────────────────────────────────────
   const currentPrice =
     selectedVariant?.effective_price || product?.effective_price;
   const maxQty = selectedVariant ? selectedVariant.stock : 99;
@@ -111,12 +127,11 @@ const ProductDetailPage = observer(() => {
     ? selectedVariant.is_out_of_stock
     : !product?.is_in_stock;
 
-  // هل المستخدم اختار كل الـ attributes؟
   const allAttrsSelected =
     !product?.available_attributes?.length ||
     product.available_attributes.every((attr) => selectedAttrs[attr.attribute]);
 
-  // ── إضافة للسلة ──
+  // ── إضافة للسلة ─────────────────────────────────────────────────────────
   const handleAddToCart = () => {
     trackEvent("AddToCart", {
       content_name: product.name,
@@ -126,8 +141,6 @@ const ProductDetailPage = observer(() => {
       currency: "EGP",
       num_items: quantity,
     });
-    // لو المنتج عنده variants، بعت الـ variant_id اللي اتحدد
-    // لو مفيش variants، بعت null
     const variantId = selectedVariant?.id ?? null;
     cartStore.addItem(product.id, variantId, quantity);
   };
@@ -162,7 +175,7 @@ const ProductDetailPage = observer(() => {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <Row gutter={[40, 40]}>
-        {/* ── الميديا ── */}
+        {/* ── الميديا ─────────────────────────────────────────────────────── */}
         <Col xs={24} md={12}>
           <div
             className="bg-white rounded-xl overflow-hidden border border-slate-100 mb-3"
@@ -183,32 +196,61 @@ const ProductDetailPage = observer(() => {
                 src={mainImage || "/placeholder.png"}
                 alt={product.name}
                 className="w-full h-full object-contain"
+                style={{ transition: "opacity 0.25s" }} // ✦ انتقال ناعم عند تغيير الصورة
               />
             )}
           </div>
 
           {/* Thumbnails */}
           <div className="flex gap-2 flex-wrap">
-            {product.images?.map((img) => (
-              <div
-                key={img.id}
-                onClick={() => {
-                  setMainImage(img.image);
-                  setMediaType("image");
-                }}
-                className={`w-16 h-16 rounded-lg border-2 overflow-hidden cursor-pointer transition-all ${
-                  mediaType === "image" && mainImage === img.image
-                    ? "border-indigo-500"
-                    : "border-slate-200"
-                }`}
-              >
-                <img
-                  src={img.image}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ))}
+            {product.images?.map((img) => {
+              const isActive = mediaType === "image" && mainImage === img.image;
+
+              // ✦ لو الصورة دي مرتبطة بـ attribute value → نجيب اسمه عشان نعرضه
+              const linkedAttrValue = img.attribute_value
+                ? product.available_attributes
+                    ?.flatMap((a) => a.values)
+                    .find((v) => v.id === img.attribute_value)
+                : null;
+
+              return (
+                <div key={img.id} style={{ position: "relative" }}>
+                  <div
+                    onClick={() => {
+                      setMainImage(img.image);
+                      setMediaType("image");
+                    }}
+                    className={`w-16 h-16 rounded-lg border-2 overflow-hidden cursor-pointer transition-all ${
+                      isActive ? "border-indigo-500" : "border-slate-200"
+                    }`}
+                  >
+                    <img
+                      src={img.image}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+
+                  {/* ✦ شارة اسم اللون/الخاصية تحت الـ thumbnail */}
+                  {linkedAttrValue && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        bottom: -18,
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        fontSize: 10,
+                        color: "#6366F1",
+                        fontWeight: 600,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {linkedAttrValue.value}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
 
             {product.videos?.map((vid) => (
               <div
@@ -251,7 +293,7 @@ const ProductDetailPage = observer(() => {
           </div>
         </Col>
 
-        {/* ── تفاصيل المنتج ── */}
+        {/* ── تفاصيل المنتج ────────────────────────────────────────────────── */}
         <Col xs={24} md={12}>
           <Text type="secondary" className="text-sm">
             {product.category_name}
@@ -263,7 +305,6 @@ const ProductDetailPage = observer(() => {
           <br />
           <br />
 
-          {/* Rating */}
           {product.avg_rating && (
             <div className="flex items-center gap-2 mb-4">
               <Rate disabled value={product.avg_rating} allowHalf />
@@ -286,7 +327,7 @@ const ProductDetailPage = observer(() => {
             )}
           </div>
 
-          {/* ── Attribute Selectors (الجديد) ── */}
+          {/* ── ✦ Attribute Selectors مع تغيير الصورة ── */}
           {product.available_attributes?.length > 0 && (
             <div className="mb-6">
               {product.available_attributes.map((attr) => (
@@ -299,34 +340,64 @@ const ProductDetailPage = observer(() => {
                       </Text>
                     )}
                   </div>
+
                   <div className="flex gap-2 flex-wrap">
                     {attr.values.map((val) => {
                       const isSelected =
                         selectedAttrs[attr.attribute]?.id === val.id;
+
+                      // ✦ لو الـ value دي عندها صورة مرتبطة، نجيبها عشان نعرض preview
+                      const linkedImg = product.images?.find(
+                        (img) => img.attribute_value === val.id
+                      );
+
                       return (
                         <button
                           key={val.id}
-                          onClick={() =>
-                            setSelectedAttrs((prev) => ({
-                              ...prev,
-                              [attr.attribute]: val,
-                            }))
+                          onClick={() => handleAttrSelect(attr.attribute, val)}
+                          title={
+                            linkedImg ? "اضغط لرؤية صورة هذا الخيار" : undefined
                           }
                           style={{
-                            padding: "6px 16px",
-                            borderRadius: 8,
+                            padding: linkedImg ? "4px" : "6px 16px",
+                            borderRadius: 10,
                             border: isSelected
                               ? "2px solid #6366f1"
                               : "1.5px solid #e2e8f0",
                             background: isSelected ? "#eef2ff" : "transparent",
-                            color: isSelected ? "#4338ca" : "inherit",
-                            fontWeight: isSelected ? 500 : 400,
                             cursor: "pointer",
-                            fontSize: 14,
                             transition: "all 0.15s",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 4,
+                            minWidth: linkedImg ? 60 : "auto",
                           }}
                         >
-                          {val.value}
+                          {/* ✦ لو في صورة مرتبطة → اعرض صورة صغيرة جوه الزرار */}
+                          {linkedImg && (
+                            <img
+                              src={linkedImg.image}
+                              alt={val.value}
+                              style={{
+                                width: 52,
+                                height: 52,
+                                objectFit: "cover",
+                                borderRadius: 6,
+                                display: "block",
+                              }}
+                            />
+                          )}
+                          <span
+                            style={{
+                              fontSize: 13,
+                              fontWeight: isSelected ? 600 : 400,
+                              color: isSelected ? "#4338ca" : "inherit",
+                              padding: linkedImg ? "0 4px 2px" : 0,
+                            }}
+                          >
+                            {val.value}
+                          </span>
                         </button>
                       );
                     })}
@@ -334,7 +405,6 @@ const ProductDetailPage = observer(() => {
                 </div>
               ))}
 
-              {/* رسالة لو اختار كل حاجة بس الـ variant مش موجود */}
               {allAttrsSelected && !selectedVariant && !variantLoading && (
                 <Text type="danger" style={{ fontSize: 13 }}>
                   هذا التوليف غير متاح حالياً
