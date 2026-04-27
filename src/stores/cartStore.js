@@ -61,19 +61,21 @@ class CartStore {
         cart_id: cartId ? parseInt(cartId) : null,
       });
       runInAction(() => {
-        this.cart = res.data.data;
+        const cartData = res.data.data;
 
-        // ✅ لو في صورة للـ variant، حدّث الـ item اللي اتضاف
-        if (variantImage && this.cart?.items) {
-          this.cart.items = this.cart.items.map((item) =>
+        // ✅ لو في صورة للـ variant، حدّثها قبل ما نحط الـ cart في الـ store
+        if (variantImage && cartData?.items) {
+          cartData.items = cartData.items.map((item) =>
             item.variant === variantId
               ? { ...item, primary_image: variantImage }
               : item
           );
         }
 
-        if (res.data.data?.id) {
-          localStorage.setItem("guest_cart_id", res.data.data.id);
+        this.cart = cartData;
+
+        if (cartData?.id) {
+          localStorage.setItem("guest_cart_id", cartData.id);
         }
         this.isOpen = true;
       });
@@ -89,7 +91,6 @@ class CartStore {
       });
     }
   }
-
   // ── Update Item ───────────────────────────────────────────
   async updateItem(itemId, quantity) {
     if (typeof quantity !== "number") return; // ← منع الـ infinite loop

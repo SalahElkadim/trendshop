@@ -134,7 +134,7 @@ const CartPage = observer(() => {
       render: (_, item) => (
         <div className="flex items-center gap-3">
           <img
-            src={item.primary_image || "/placeholder.png"}
+            src={item.variant_image || item.primary_image || "/placeholder.png"}
             alt={item.product_name}
             className="w-14 h-14 object-cover rounded-lg"
             style={{ flexShrink: 0 }}

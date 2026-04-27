@@ -232,7 +232,6 @@ const ProductDetailPage = observer(() => {
                       setMainImage(img.image);
                       setMediaType("image");
 
-                      // لو الصورة دي مرتبطة بـ attribute value → اختره تلقائياً
                       if (img.attribute_value) {
                         const linkedAttr = product.available_attributes?.find(
                           (attr) =>
@@ -244,13 +243,14 @@ const ProductDetailPage = observer(() => {
                           (v) => v.id === img.attribute_value
                         );
                         if (linkedAttr && linkedVal) {
-                          handleAttrSelect(linkedAttr.attribute, linkedVal);
+                          // ✅ بس بنحدث الـ selectedAttrs من غير ما نغير الصورة تاني
+                          setSelectedAttrs((prev) => ({
+                            ...prev,
+                            [linkedAttr.attribute]: linkedVal,
+                          }));
                         }
                       }
                     }}
-                    className={`w-16 h-16 rounded-lg border-2 overflow-hidden cursor-pointer transition-all ${
-                      isActive ? "border-indigo-500" : "border-slate-200"
-                    }`}
                   >
                     <img
                       src={img.image}
