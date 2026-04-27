@@ -45,7 +45,12 @@ class CartStore {
   }
 
   // ── Add Item ──────────────────────────────────────────────
-  async addItem(productId, variantId = null, quantity = 1) {
+  async addItem(
+    productId,
+    variantId = null,
+    quantity = 1,
+    variantImage = null
+  ) {
     this.isLoading = true;
     try {
       const cartId = this.cart?.id || localStorage.getItem("guest_cart_id");
@@ -57,6 +62,16 @@ class CartStore {
       });
       runInAction(() => {
         this.cart = res.data.data;
+
+        // ✅ لو في صورة للـ variant، حدّث الـ item اللي اتضاف
+        if (variantImage && this.cart?.items) {
+          this.cart.items = this.cart.items.map((item) =>
+            item.variant === variantId
+              ? { ...item, primary_image: variantImage }
+              : item
+          );
+        }
+
         if (res.data.data?.id) {
           localStorage.setItem("guest_cart_id", res.data.data.id);
         }

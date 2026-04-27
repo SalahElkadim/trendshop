@@ -141,8 +141,20 @@ const ProductDetailPage = observer(() => {
       currency: "EGP",
       num_items: quantity,
     });
+
     const variantId = selectedVariant?.id ?? null;
-    cartStore.addItem(product.id, variantId, quantity);
+
+    // ✅ جيب صورة الـ variant المختار
+    const variantImage =
+      product.images?.find(
+        (img) =>
+          img.attribute_value !== null &&
+          Object.values(selectedAttrs).some(
+            (attr) => attr.id === img.attribute_value
+          )
+      )?.image ?? null;
+
+    cartStore.addItem(product.id, variantId, quantity, variantImage);
   };
 
   const handleSubmitReview = async (values) => {
