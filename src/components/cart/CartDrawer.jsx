@@ -78,7 +78,7 @@ const CartDrawer = observer(() => {
             >
               {/* صورة المنتج */}
               <img
-                src={item.primary_image || "/placeholder.png"}
+                src={item.variant_image || item.primary_image || "/placeholder.png"}
                 alt={item.product_name}
                 className="w-16 h-16 object-cover rounded-md"
               />

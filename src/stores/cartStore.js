@@ -30,7 +30,7 @@ class CartStore {
       const cartId = this.cart?.id || localStorage.getItem("guest_cart_id");
       const res = await cartAPI.getCart(cartId ? { cart_id: cartId } : {});
       runInAction(() => {
-        this.cart = res.data.data;
+        this.cart = this._applyVariantImages(res.data.data);;
         if (res.data.data?.id) {
           localStorage.setItem("guest_cart_id", res.data.data.id);
         }
@@ -64,13 +64,16 @@ class CartStore {
         const cartData = res.data.data;
 
         // ✅ لو في صورة للـ variant، حدّثها قبل ما نحط الـ cart في الـ store
-        if (variantImage && cartData?.items) {
-          cartData.items = cartData.items.map((item) =>
-            item.variant === variantId
-              ? { ...item, primary_image: variantImage }
-              : item
+        // ✅ بعد — هنحفظ صورة الـ variant في localStorage عشان تفضل موجودة بعد refresh
+        if (variantImage && variantId) {
+          const saved = JSON.parse(
+            localStorage.getItem("variant_images") || "{}"
           );
+          saved[variantId] = variantImage;
+          localStorage.setItem("variant_images", JSON.stringify(saved));
         }
+
+        this.cart = this._applyVariantImages(cartData);
 
         this.cart = cartData;
 
@@ -97,7 +100,7 @@ class CartStore {
     try {
       const res = await cartAPI.updateItem(itemId, quantity, this.cart?.id);
       runInAction(() => {
-        this.cart = res.data.data;
+        this.cart = this._applyVariantImages(res.data.data);;
       });
     } catch (err) {
       message.error(err.response?.data?.message || "فشل التحديث.");
@@ -108,7 +111,7 @@ class CartStore {
     try {
       const res = await cartAPI.removeItem(itemId, this.cart?.id);
       runInAction(() => {
-        this.cart = res.data.data;
+        this.cart = this._applyVariantImages(res.data.data);;
       });
       message.success("تم حذف المنتج من السلة.");
     } catch {
@@ -132,6 +135,20 @@ class CartStore {
   closeDrawer() {
     this.isOpen = false;
   }
-}
+  // ✅ هنا — بعد closeDrawer وقبل آخر }
+  _applyVariantImages(cartData) {
+    if (!cartData?.items) return cartData;
+    const saved = JSON.parse(localStorage.getItem("variant_images") || "{}");
+    return {
+      ...cartData,
+      items: cartData.items.map((item) =>
+        item.variant && saved[item.variant]
+          ? { ...item, variant_image: saved[item.variant] }
+          : item
+      ),
+    };
+  }
+}  // ← آخر } بتاعت الـ class
+
 
 export default new CartStore();
