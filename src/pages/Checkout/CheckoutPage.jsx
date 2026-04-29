@@ -314,16 +314,6 @@ const CheckoutPage = observer(() => {
               >
                 <Input placeholder="example@email.com" />
               </Form.Item>
-
-              {/* الكود البريدي */}
-              <Form.Item
-                name="shipping_postal_code"
-                label="الكود البريدي"
-                rules={[{ required: true, message: "أدخل الكود البريدي" }]}
-              >
-                <Input placeholder="أدخل الكود البريدي" />
-              </Form.Item>
-
               {/* 8. الملاحظات */}
               <Form.Item name="notes" label="ملاحظات">
                 <Input.TextArea
