@@ -19,7 +19,7 @@ const MainLayout = () => {
       <CartDrawer />
       {/* ── واتساب ── */}
 
-      <a href="https://wa.me/201026002193"  // ← غير الرقم
+      <a href="https://wa.me/201035110224"  // ← غير الرقم
       target="_blank"
       rel="noopener noreferrer"
       style={{
