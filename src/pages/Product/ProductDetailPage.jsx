@@ -23,6 +23,7 @@ import cartStore from "../../stores/cartStore";
 import authStore from "../../stores/authStore";
 import { trackEvent } from "../../utils/pixel";
 
+const [visibleReviews, setVisibleReviews] = useState(5);
 const { Title, Text } = Typography;
 
 const ProductDetailPage = observer(() => {
@@ -494,7 +495,7 @@ const ProductDetailPage = observer(() => {
                     <Empty description="لا توجد تقييمات بعد" />
                   ) : (
                     <div className="flex flex-col gap-4 mb-8">
-                      {product.reviews?.map((r) => (
+                      {product.reviews?.slice(0, visibleReviews).map((r) => (
                         <div
                           key={r.id}
                           className="bg-white rounded-xl p-4 border border-slate-100"
@@ -522,7 +523,17 @@ const ProductDetailPage = observer(() => {
                       ))}
                     </div>
                   )}
-
+                  {product.reviews?.length > visibleReviews && (
+                    <Button
+                      type="default"
+                      block
+                      onClick={() => setVisibleReviews((prev) => prev + 5)}
+                      className="mt-4"
+                    >
+                      اقرأ المزيد ({product.reviews.length - visibleReviews}{" "}
+                      تقييم متبقي)
+                    </Button>
+                  )}
                   {authStore.isLoggedIn && (
                     <>
                       <Divider>أضف تقييمك</Divider>

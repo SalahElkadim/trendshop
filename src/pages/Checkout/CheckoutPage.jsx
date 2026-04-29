@@ -116,63 +116,82 @@ const CheckoutPage = observer(() => {
     }
   };
 
-  const handleSubmit = async (values) => {
-    if (cartStore.items.length === 0) {
-      message.error("السلة فارغة!");
-      return;
-    }
-    if (!selectedGov) {
-      message.error("اختر المحافظة أولاً!");
-      return;
+const handleSubmit = async (values) => {
+  if (cartStore.items.length === 0) {
+    message.error("السلة فارغة!");
+    return;
+  }
+  if (!selectedGov) {
+    message.error("اختر المحافظة أولاً!");
+    return;
+  }
+
+  setSubmitting(true);
+  try {
+    const items = cartStore.items.map((item) => ({
+      product_id: item.product,
+      variant_id: item.variant || null,
+      quantity: item.quantity,
+    }));
+
+    const payload = {
+      ...values,
+      shipping_city: selectedGov,
+      shipping_country: "مصر",
+      payment_method: "cod",
+      coupon_code: couponData?.coupon?.code || "",
+      shipping_cost: shippingCost,
+      items,
+    };
+
+    if (!authStore.isLoggedIn) {
+      payload.guest_email = values.guest_email;
     }
 
-    setSubmitting(true);
-    try {
-      const items = cartStore.items.map((item) => ({
-        product_id: item.product,
-        variant_id: item.variant || null,
-        quantity: item.quantity,
-      }));
+    const res = await ordersAPI.checkout(payload);
+    const order = res.data.data;
 
-      const payload = {
-        ...values,
-        shipping_city: selectedGov,
-        shipping_country: "مصر",
-        payment_method: "cod",
-        coupon_code: couponData?.coupon?.code || "",
-        shipping_cost: shippingCost,
-        items,
+    runInAction(() => {
+      cartStore.cart = {
+        ...cartStore.cart,
+        items: [],
+        total_items: 0,
+        subtotal: 0,
       };
+    });
+    localStorage.removeItem("guest_cart_id");
 
-      if (!authStore.isLoggedIn) {
-        payload.guest_email = values.guest_email;
-      }
+    navigate(`/order-success/${order.order_number}`);
+  } catch (err) {
+    const response = err.response?.data;
 
-      const res = await ordersAPI.checkout(payload);
-      const order = res.data.data;
+    if (response?.errors) {
+      // لو الـ errors object فيه fields زي { shipping_name: ["..."], ... }
+      const errorMessages = Object.entries(response.errors)
+        .map(([field, messages]) => {
+          const msgs = Array.isArray(messages) ? messages.join(" ") : messages;
+          return `• ${msgs}`;
+        })
+        .join("\n");
 
-      runInAction(() => {
-        cartStore.cart = {
-          ...cartStore.cart,
-          items: [],
-          total_items: 0,
-          subtotal: 0,
-        };
+      message.error({
+        content: (
+          <div style={{ textAlign: "right", whiteSpace: "pre-line" }}>
+            {errorMessages}
+          </div>
+        ),
+        duration: 6,
       });
-      localStorage.removeItem("guest_cart_id");
-
-      navigate(`/order-success/${order.order_number}`);
-    } catch (err) {
-      const errors = err.response?.data?.errors;
-      if (errors) {
-        message.error(JSON.stringify(errors));
-      } else {
-        message.error(err.response?.data?.message || "فشل إتمام الطلب.");
-      }
-    } finally {
-      setSubmitting(false);
+    } else if (response?.message) {
+      // رسالة عادية من السيرفر
+      message.error(response.message);
+    } else {
+      message.error("حدث خطأ غير متوقع، حاول مرة أخرى.");
     }
-  };
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   const shippingLabel = getShippingLabel(shippingCost);
 
@@ -316,8 +335,12 @@ const CheckoutPage = observer(() => {
               </Form.Item>
 
               {/* الكود البريدي */}
-              <Form.Item name="shipping_postal_code" label="الكود البريدي">
-                <Input placeholder="اختياري" />
+              <Form.Item
+                name="shipping_postal_code"
+                label="الكود البريدي"
+                rules={[{ required: true, message: "أدخل الكود البريدي" }]}
+              >
+                <Input placeholder="أدخل الكود البريدي" />
               </Form.Item>
 
               {/* 8. الملاحظات */}
