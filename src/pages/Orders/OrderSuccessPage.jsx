@@ -60,7 +60,7 @@ const OrderSuccessPage = () => {
       <Result
         status="success"
         title="تم استلام طلبك بنجاح! 🎉"
-        subTitle={`رقم الطلب: ${orderNumber} - سيتم التواصل معك قريباً لتأكيد التوصيل.`}
+        subTitle={`رقم الطلب: ${orderNumber} -سيتم التواصل معك على مدار اليوم لتأكيد الطلب .`}
         extra={[
           <Link to={`/orders/${orderNumber}`} key="detail">
             <Button type="primary">تتبع الطلب</Button>
