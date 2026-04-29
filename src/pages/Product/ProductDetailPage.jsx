@@ -23,17 +23,15 @@ import cartStore from "../../stores/cartStore";
 import authStore from "../../stores/authStore";
 import { trackEvent } from "../../utils/pixel";
 
-const [visibleReviews, setVisibleReviews] = useState(5);
 const { Title, Text } = Typography;
 
 const ProductDetailPage = observer(() => {
   const { slug } = useParams();
   const [product, setProduct] = useState(null);
-
+  const [visibleReviews, setVisibleReviews] = useState(5);
   const [selectedAttrs, setSelectedAttrs] = useState({});
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [variantLoading, setVariantLoading] = useState(false);
-
   const [quantity, setQuantity] = useState(1);
   const [mainImage, setMainImage] = useState(null);
   const [mainVideo, setMainVideo] = useState(null);
