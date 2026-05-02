@@ -71,7 +71,7 @@ const getShippingCost = (governorate) => {
   if (!governorate) return 0;
   if (FREE_SHIPPING.includes(governorate)) return 0;
   if (EXPENSIVE_SHIPPING.includes(governorate)) return 50;
-  return 25;
+  return 35;
 };
 
 const getShippingLabel = (cost) => {
