@@ -211,9 +211,15 @@ const CheckoutPage = observer(() => {
               <Form.Item
                 name="shipping_phone"
                 label="رقم الهاتف"
-                rules={[{ required: true, message: "أدخل رقم الهاتف" }]}
+                rules={[
+                  { required: true, message: "أدخل رقم الهاتف" },
+                  {
+                    pattern: /^01[0125][0-9]{8}$/,
+                    message: "أدخل رقم مصري صحيح (مثال: 01xxxxxxxxx)",
+                  },
+                ]}
               >
-                <Input placeholder="01xxxxxxxxx" />
+                <Input placeholder="01xxxxxxxxx" maxLength={11} />
               </Form.Item>
 
               {/* 3. الدولة + 4. المحافظة — في صف واحد */}
