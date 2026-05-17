@@ -328,7 +328,16 @@ const ProductDetailPage = observer(() => {
           <Title level={2} style={{ margin: "8px 0" }}>
             {product.name}
           </Title>
-          <Text type="secondary">{product.description}</Text>
+          <div className="flex flex-col gap-1">
+            {product.description
+              ?.split(/(?<=\.)\s+/)
+              .filter(Boolean)
+              .map((sentence, i) => (
+                <Text key={i} type="secondary" className="block">
+                  {sentence}
+                </Text>
+              ))}
+          </div>
           <br />
           <br />
 
