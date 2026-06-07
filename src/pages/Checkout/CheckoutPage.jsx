@@ -45,7 +45,7 @@ const CheckoutPage = observer(() => {
   useEffect(() => {
     setRatesLoading(true);
     getShippingRates()
-      .then((res) => setShippingRates(res.data.data || []))
+      .then((res) => setShippingRates(res.data.results || res.data.data || []))
       .catch(() => message.error("فشل تحميل أسعار الشحن."))
       .finally(() => setRatesLoading(false));
   }, []);

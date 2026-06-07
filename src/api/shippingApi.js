@@ -1,8 +1,7 @@
 // api/shippingApi.js
 import api from "./axios";
 
-export const getShippingRates = () => api.get("/shipping-rates/");
-
+export const getShippingRates = () => api.get("/shipping-rates/?page_size=100");
 export const getShippingCost = async (governorate) => {
   const res = await getShippingRates();
   const rates = res.data.data;
