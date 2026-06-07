@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { observer } from "mobx-react-lite";
 import { runInAction } from "mobx";
@@ -17,109 +17,80 @@ import {
   Alert,
   Select,
   Checkbox,
+  Spin,
 } from "antd";
 import { couponsAPI, ordersAPI } from "../../api/services";
+import { getShippingRates } from "../../api/shippingApi";
 import cartStore from "../../stores/cartStore";
 import authStore from "../../stores/authStore";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// المحافظات وتكلفة الشحن
-// ─────────────────────────────────────────────────────────────────────────────
-const FREE_SHIPPING = ["القاهرة", "الجيزة"];
-const EXPENSIVE_SHIPPING = [
-  "شمال سيناء",
-  "جنوب سيناء",
-  "الوادي الجديد",
-  "البحر الأحمر",
-  "الأقصر",
-  "أسوان",
-];
-
-const GOVERNORATES = [
-  "القاهرة",
-  "الجيزة",
-  "الإسكندرية",
-  "الدقهلية",
-  "البحيرة",
-  "الفيوم",
-  "الغربية",
-  "الإسماعيلية",
-  "المنوفية",
-  "المنيا",
-  "القليوبية",
-  "الوادي الجديد",
-  "السويس",
-  "أسوان",
-  "أسيوط",
-  "بني سويف",
-  "بورسعيد",
-  "دمياط",
-  "الشرقية",
-  "جنوب سيناء",
-  "كفر الشيخ",
-  "مطروح",
-  "الأقصر",
-  "قنا",
-  "شمال سيناء",
-  "سوهاج",
-  "البحر الأحمر",
-];
-
-const getShippingCost = (governorate) => {
-  if (!governorate) return 25;
-  if (FREE_SHIPPING.includes(governorate)) return 25;
-  if (EXPENSIVE_SHIPPING.includes(governorate)) return 50;
-  return 35;
-};
-
-const getShippingLabel = (cost) => {
-  if (cost === 25) return { text: `${cost} ج.م`, color: "success" };
-  if (cost === 50) return { text: `${cost} ج.م`, color: "warning" };
-  return { text: `${cost} ج.م`, color: "secondary" };
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CHECKOUT PAGE
-// ─────────────────────────────────────────────────────────────────────────────
 const CheckoutPage = observer(() => {
   const navigate = useNavigate();
   const [form] = Form.useForm();
+
+  const [shippingRates, setShippingRates] = useState([]);
+  const [ratesLoading, setRatesLoading] = useState(true);
 
   const [couponCode, setCouponCode] = useState("");
   const [couponData, setCouponData] = useState(null);
   const [couponLoading, setCouponLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selectedGov, setSelectedGov] = useState(null);
-
-  // ── واتساب: هل رقمه نفس رقم التليفون؟ ──────────────────────────────────
   const [sameAsPhone, setSameAsPhone] = useState(false);
+
+  // ── جيب أسعار الشحن من الـ API ──────────────────────────────────────────
+  useEffect(() => {
+    setRatesLoading(true);
+    getShippingRates()
+      .then((res) => setShippingRates(res.data.data || []))
+      .catch(() => message.error("فشل تحميل أسعار الشحن."))
+      .finally(() => setRatesLoading(false));
+  }, []);
+
+  // ── حساب تكلفة الشحن ────────────────────────────────────────────────────
+  const getShippingCost = (gov) => {
+    if (!gov) return 0;
+    const rate = shippingRates.find((r) => r.governorate === gov);
+    return rate ? Number(rate.cost) : 35; // fallback
+  };
+
+  const getShippingLabel = (cost) => {
+    if (cost === 0)
+      return { color: "#15803D", bg: "#F0FDF4", border: "#BBF7D0" };
+    if (cost <= 25)
+      return { color: "#15803D", bg: "#F0FDF4", border: "#BBF7D0" };
+    if (cost >= 50)
+      return { color: "#C2410C", bg: "#FFF7ED", border: "#FED7AA" };
+    return { color: "#1D4ED8", bg: "#EFF6FF", border: "#BFDBFE" };
+  };
 
   const shippingCost = getShippingCost(selectedGov);
   const subtotal = Number(cartStore.subtotal);
   const discount = couponData ? Number(couponData.discount_amount) : 0;
   const finalTotal = subtotal - discount + shippingCost;
+  const shippingLabel = getShippingLabel(shippingCost);
 
-  // لما يغير رقم التليفون ويكون sameAsPhone مفعّل → حدّث رقم الواتساب تلقائياً
+  // ── واتساب ───────────────────────────────────────────────────────────────
   const handlePhoneChange = (e) => {
-    if (sameAsPhone) {
-      form.setFieldValue("whatsapp_number", e.target.value);
-    }
+    if (sameAsPhone) form.setFieldValue("whatsapp_number", e.target.value);
   };
 
-  // لما يضغط على checkbox "نفس رقم الهاتف"
   const handleSameAsPhone = (e) => {
     setSameAsPhone(e.target.checked);
     if (e.target.checked) {
-      const phone = form.getFieldValue("shipping_phone") || "";
-      form.setFieldValue("whatsapp_number", phone);
+      form.setFieldValue(
+        "whatsapp_number",
+        form.getFieldValue("shipping_phone") || ""
+      );
     } else {
       form.setFieldValue("whatsapp_number", "");
     }
   };
 
+  // ── كوبون ────────────────────────────────────────────────────────────────
   const handleValidateCoupon = async () => {
     if (!couponCode) return;
     setCouponLoading(true);
@@ -138,6 +109,7 @@ const CheckoutPage = observer(() => {
     }
   };
 
+  // ── Submit ───────────────────────────────────────────────────────────────
   const handleSubmit = async (values) => {
     if (cartStore.items.length === 0) {
       message.error("السلة فارغة!");
@@ -163,7 +135,6 @@ const CheckoutPage = observer(() => {
         payment_method: "cod",
         coupon_code: couponData?.coupon?.code || "",
         shipping_cost: shippingCost,
-        // ── واتساب ──────────────────────────────────────────────────────────
         whatsapp_number: values.whatsapp_number || "",
         items,
       };
@@ -188,17 +159,21 @@ const CheckoutPage = observer(() => {
       navigate(`/order-success/${order.order_number}`);
     } catch (err) {
       const errors = err.response?.data?.errors;
-      if (errors) {
-        message.error(JSON.stringify(errors));
-      } else {
-        message.error(err.response?.data?.message || "فشل إتمام الطلب.");
-      }
+      if (errors) message.error(JSON.stringify(errors));
+      else message.error(err.response?.data?.message || "فشل إتمام الطلب.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const shippingLabel = getShippingLabel(shippingCost);
+  // ── Render ───────────────────────────────────────────────────────────────
+  if (ratesLoading) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", padding: 80 }}>
+        <Spin size="large" tip="جارٍ تحميل أسعار الشحن..." />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
@@ -207,11 +182,10 @@ const CheckoutPage = observer(() => {
       </Title>
 
       <Row gutter={[32, 32]}>
-        {/* ── نموذج الشحن ── */}
+        {/* ── نموذج الشحن ──────────────────────────────────────────────── */}
         <Col xs={24} lg={14}>
           <Card title="بيانات الشحن" className="mb-6">
             <Form form={form} layout="vertical" onFinish={handleSubmit}>
-              {/* Guest alert */}
               {!authStore.isLoggedIn && (
                 <Alert
                   message="أنت تتسوق كضيف"
@@ -222,7 +196,7 @@ const CheckoutPage = observer(() => {
                 />
               )}
 
-              {/* 1. الاسم */}
+              {/* الاسم */}
               <Form.Item
                 name="shipping_name"
                 label="الاسم الكامل"
@@ -231,7 +205,7 @@ const CheckoutPage = observer(() => {
                 <Input placeholder="محمد أحمد" />
               </Form.Item>
 
-              {/* 2. رقم التليفون + واتساب في صف واحد */}
+              {/* التليفون + واتساب */}
               <Row gutter={16}>
                 <Col xs={24} sm={12}>
                   <Form.Item
@@ -253,7 +227,6 @@ const CheckoutPage = observer(() => {
                   </Form.Item>
                 </Col>
 
-                {/* ── حقل الواتساب ── */}
                 <Col xs={24} sm={12}>
                   <Form.Item
                     name="whatsapp_number"
@@ -265,13 +238,11 @@ const CheckoutPage = observer(() => {
                           gap: 6,
                         }}
                       >
-                        {/* أيقونة واتساب SVG بسيطة */}
                         <svg
                           width="16"
                           height="16"
                           viewBox="0 0 24 24"
                           fill="#25D366"
-                          xmlns="http://www.w3.org/2000/svg"
                         >
                           <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
                         </svg>
@@ -302,7 +273,6 @@ const CheckoutPage = observer(() => {
                     />
                   </Form.Item>
 
-                  {/* Checkbox: نفس رقم الهاتف */}
                   <div style={{ marginTop: -16, marginBottom: 16 }}>
                     <Checkbox
                       checked={sameAsPhone}
@@ -315,7 +285,7 @@ const CheckoutPage = observer(() => {
                 </Col>
               </Row>
 
-              {/* 3. الدولة + 4. المحافظة — في صف واحد */}
+              {/* الدولة + المحافظة */}
               <Row gutter={16}>
                 <Col xs={24} sm={12}>
                   <Form.Item name="shipping_country" label="الدولة">
@@ -336,9 +306,9 @@ const CheckoutPage = observer(() => {
                         option?.children?.includes(input)
                       }
                     >
-                      {GOVERNORATES.map((gov) => (
-                        <Option key={gov} value={gov}>
-                          {gov}
+                      {shippingRates.map((rate) => (
+                        <Option key={rate.governorate} value={rate.governorate}>
+                          {rate.governorate} — {Number(rate.cost)} ج.م
                         </Option>
                       ))}
                     </Select>
@@ -350,19 +320,8 @@ const CheckoutPage = observer(() => {
               {selectedGov && (
                 <div
                   style={{
-                    background:
-                      shippingCost === 0
-                        ? "#F0FDF4"
-                        : shippingCost === 50
-                        ? "#FFF7ED"
-                        : "#EFF6FF",
-                    border: `1px solid ${
-                      shippingCost === 0
-                        ? "#BBF7D0"
-                        : shippingCost === 50
-                        ? "#FED7AA"
-                        : "#BFDBFE"
-                    }`,
+                    background: shippingLabel.bg,
+                    border: `1px solid ${shippingLabel.border}`,
                     borderRadius: 8,
                     padding: "10px 14px",
                     marginBottom: 16,
@@ -371,19 +330,8 @@ const CheckoutPage = observer(() => {
                     gap: 8,
                   }}
                 >
-                  <span style={{ fontSize: 18 }}>
-                    {shippingCost === 0 ? "🎉" : "🚚"}
-                  </span>
-                  <Text
-                    style={{
-                      color:
-                        shippingCost === 0
-                          ? "#15803D"
-                          : shippingCost === 50
-                          ? "#C2410C"
-                          : "#1D4ED8",
-                    }}
-                  >
+                  <span style={{ fontSize: 18 }}>🚚</span>
+                  <Text style={{ color: shippingLabel.color }}>
                     تكلفة الشحن لـ <strong>{selectedGov}</strong>:{" "}
                     <strong>
                       {shippingCost === 0 ? "مجاني" : `${shippingCost} ج.م`}
@@ -392,7 +340,7 @@ const CheckoutPage = observer(() => {
                 </div>
               )}
 
-              {/* 5. العنوان بالتفصيل */}
+              {/* العنوان */}
               <Form.Item
                 name="shipping_address"
                 label="العنوان بالتفصيل"
@@ -401,7 +349,7 @@ const CheckoutPage = observer(() => {
                 <Input placeholder="الشارع، رقم المبنى، الشقة" />
               </Form.Item>
 
-              {/* 6. الإيميل */}
+              {/* الإيميل */}
               <Form.Item
                 name="guest_email"
                 label="البريد الإلكتروني (اختياري)"
@@ -410,7 +358,7 @@ const CheckoutPage = observer(() => {
                 <Input placeholder="example@email.com" />
               </Form.Item>
 
-              {/* 7. الملاحظات */}
+              {/* الملاحظات */}
               <Form.Item name="notes" label="ملاحظات">
                 <Input.TextArea
                   rows={3}
@@ -450,7 +398,7 @@ const CheckoutPage = observer(() => {
           </Card>
         </Col>
 
-        {/* ── ملخص الطلب ── */}
+        {/* ── ملخص الطلب ───────────────────────────────────────────────── */}
         <Col xs={24} lg={10}>
           <Card title="ملخص الطلب" className="sticky top-20">
             {/* Items */}
@@ -489,7 +437,7 @@ const CheckoutPage = observer(() => {
 
             <Divider />
 
-            {/* كود الخصم */}
+            {/* كوبون */}
             <div className="mb-4">
               <Text strong className="block mb-2">
                 كود الخصم
@@ -534,8 +482,12 @@ const CheckoutPage = observer(() => {
 
               <div className="flex justify-between">
                 <Text>الشحن {selectedGov && `(${selectedGov})`}</Text>
-                <Text type={shippingLabel.color}>
-                  {shippingCost === 0 ? "مجاني" : `${shippingCost} ج.م`}
+                <Text style={{ color: shippingLabel.color }}>
+                  {!selectedGov
+                    ? "—"
+                    : shippingCost === 0
+                    ? "مجاني"
+                    : `${shippingCost} ج.م`}
                 </Text>
               </div>
 

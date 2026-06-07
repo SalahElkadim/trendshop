@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const BASE_URL = process.env.REACT_APP_API_URL + "/api/store";
+const BASE_URL =
+  (process.env.REACT_APP_API_URL || "http://localhost:8000") + "/api/store";
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -28,16 +29,17 @@ api.interceptors.response.use(
   async (error) => {
     const original = error.config;
 
-    // ✅ لو الـ refresh نفسه فشل، وقف فوراً
-    if (original.url?.includes("/auth/token/refresh/")) {
+    // ✅ لو اتعمل retry قبل كده، وقف فوراً
+    if (original._retry) {
       localStorage.removeItem("access_token");
       localStorage.removeItem("refresh_token");
       window.location.href = "/login";
       return Promise.reject(error);
     }
 
-    if (error.response?.status === 401 && !original._retry) {
+    if (error.response?.status === 401) {
       original._retry = true;
+
       const refresh = localStorage.getItem("refresh_token");
 
       if (!refresh) {
@@ -46,19 +48,21 @@ api.interceptors.response.use(
       }
 
       try {
-        // ✅ axios مباشرة مش api عشان مندخلش في الـ interceptor
-        const res = await axios.post(`${BASE_URL}/auth/token/refresh/`, {
-          refresh,
-        });
+        const res = await axios.post(
+          `${
+            process.env.REACT_APP_API_URL || "http://localhost:8000"
+          }/api/store/auth/token/refresh/`,
+          { refresh }
+        );
         const newAccess = res.data.access;
         localStorage.setItem("access_token", newAccess);
         original.headers.Authorization = `Bearer ${newAccess}`;
         return api(original);
-      } catch (refreshError) {
+      } catch {
         localStorage.removeItem("access_token");
         localStorage.removeItem("refresh_token");
         window.location.href = "/login";
-        return Promise.reject(refreshError);
+        return Promise.reject(error);
       }
     }
 
