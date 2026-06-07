@@ -308,7 +308,7 @@ const CheckoutPage = observer(() => {
                     >
                       {shippingRates.map((rate) => (
                         <Option key={rate.governorate} value={rate.governorate}>
-                          {rate.governorate} — {Number(rate.cost)} ج.م
+                          {rate.governorate} 
                         </Option>
                       ))}
                     </Select>
