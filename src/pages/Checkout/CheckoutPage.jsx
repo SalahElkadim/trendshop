@@ -39,6 +39,7 @@ const CheckoutPage = observer(() => {
   const [couponLoading, setCouponLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selectedGov, setSelectedGov] = useState(null);
+  const [selectedDistrict, setSelectedDistrict] = useState("");
   const [sameAsPhone, setSameAsPhone] = useState(false);
 
   // ── جيب أسعار الشحن من الـ API ──────────────────────────────────────────
@@ -131,6 +132,7 @@ const CheckoutPage = observer(() => {
       const payload = {
         ...values,
         shipping_city: selectedGov,
+        shipping_district: values.shipping_district || "",
         shipping_country: "مصر",
         payment_method: "cod",
         coupon_code: couponData?.coupon?.code || "",
@@ -288,11 +290,6 @@ const CheckoutPage = observer(() => {
               {/* الدولة + المحافظة */}
               <Row gutter={16}>
                 <Col xs={24} sm={12}>
-                  <Form.Item name="shipping_country" label="الدولة">
-                    <Input value="مصر" defaultValue="مصر" disabled />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} sm={12}>
                   <Form.Item
                     name="shipping_city"
                     label="المحافظة"
@@ -301,21 +298,32 @@ const CheckoutPage = observer(() => {
                     <Select
                       placeholder="اختر المحافظة..."
                       showSearch
-                      onChange={(val) => setSelectedGov(val)}
+                      onChange={(val) => {
+                        setSelectedGov(val);
+                        setSelectedDistrict(""); // ← reset المركز لما تغير المحافظة
+                        form.setFieldValue("shipping_district", "");
+                      }}
                       filterOption={(input, option) =>
                         option?.children?.includes(input)
                       }
                     >
                       {shippingRates.map((rate) => (
                         <Option key={rate.governorate} value={rate.governorate}>
-                          {rate.governorate} 
+                          {rate.governorate}
                         </Option>
                       ))}
                     </Select>
                   </Form.Item>
                 </Col>
+                <Col xs={24} sm={12}>
+                  <Form.Item name="shipping_district" label="المركز / المنطقة">
+                    <Input
+                      placeholder="المركز أو المنطقة (اختياري)"
+                      onChange={(e) => setSelectedDistrict(e.target.value)}
+                    />
+                  </Form.Item>
+                </Col>
               </Row>
-
               {/* بنر تكلفة الشحن */}
               {selectedGov && (
                 <div
