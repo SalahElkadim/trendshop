@@ -22,6 +22,8 @@ import { productsAPI, reviewsAPI } from "../../api/services";
 import cartStore from "../../stores/cartStore";
 import authStore from "../../stores/authStore";
 import { trackEvent } from "../../utils/pixel";
+import PriceTiersWidget from "./PriceTiersWidget"; // ← عدّل المسار
+
 
 const { Title, Text } = Typography;
 
@@ -119,8 +121,20 @@ const ProductDetailPage = observer(() => {
   };
 
   // ── حساب السعر والكمية ──────────────────────────────────────────────────
-  const currentPrice =
-    selectedVariant?.effective_price || product?.effective_price;
+  const getPriceForQuantity = (qty) => {
+    const tiers = product?.price_tiers;
+    if (!tiers || tiers.length === 0)
+      return selectedVariant?.effective_price || product?.effective_price;
+
+    const sorted = [...tiers].sort((a, b) => b.min_quantity - a.min_quantity);
+    const matched = sorted.find((t) => t.min_quantity <= qty);
+    return matched
+      ? Number(matched.unit_price)
+      : Number(selectedVariant?.effective_price || product?.effective_price);
+  };
+
+  const currentPrice = getPriceForQuantity(quantity);
+  const currentTotal = currentPrice * quantity;
   const maxQty = selectedVariant ? selectedVariant.stock : 99;
   const isOutOfStock = selectedVariant
     ? selectedVariant.is_out_of_stock
@@ -351,9 +365,14 @@ const ProductDetailPage = observer(() => {
           {/* Price */}
           <div className="flex items-center gap-3 mb-6">
             <Title level={2} style={{ margin: 0, color: "#6366f1" }}>
-              {Number(currentPrice).toLocaleString()} ج.م
+              {currentTotal.toLocaleString()} ج.م
             </Title>
-            {product.discount_price && (
+            {quantity > 1 && (
+              <Text type="secondary" style={{ fontSize: 14 }}>
+                ({currentPrice.toLocaleString()} ج.م × {quantity})
+              </Text>
+            )}
+            {product.discount_price && quantity === 1 && (
               <>
                 <Text delete type="secondary" style={{ fontSize: 18 }}>
                   {Number(product.price).toLocaleString()} ج.م
@@ -448,10 +467,23 @@ const ProductDetailPage = observer(() => {
               )}
             </div>
           )}
-
+          {product?.price_tiers?.length > 0 && (
+            <PriceTiersWidget
+              tiers={product.price_tiers}
+              basePrice={
+                selectedVariant?.effective_price || product?.effective_price
+              }
+              quantity={quantity}
+              onSelect={(qty) => setQuantity(qty)}
+            />
+          )}
           {/* Quantity */}
           <div className="flex items-center gap-4 mb-6">
-            <Text strong>الكمية:</Text>
+            <Text strong>
+              {product?.price_tiers?.length > 0
+                ? `أو اختر كمية أخرى:`
+                : "الكمية:"}
+            </Text>
             <InputNumber
               min={1}
               max={maxQty || 99}
