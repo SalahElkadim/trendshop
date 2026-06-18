@@ -55,44 +55,42 @@ export default function PriceTiersWidget({
       }}
     >
       {/* ── Header ── */}
+      {/* ── Header ── */}
       <div
         style={{
           display: "flex",
-          alignItems: "center",
-          gap: 8,
+          flexDirection: "column", // ← غيّر من row لـ column
+          gap: 6,
           marginBottom: 14,
         }}
       >
-        <div
-          style={{
-            width: 30,
-            height: 30,
-            borderRadius: 8,
-            background: "linear-gradient(135deg, #6366F1, #8B5CF6)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-        >
-          <TagsOutlined style={{ color: "#fff", fontSize: 14 }} />
+        {/* الأيقونة والعنوان في row */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: 8,
+              background: "linear-gradient(135deg, #6366F1, #8B5CF6)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <TagsOutlined style={{ color: "#fff", fontSize: 14 }} />
+          </div>
+          <Text style={{ fontWeight: 700, fontSize: 14, color: "#1e1b4b" }}>
+            احصل على أفضل سعر
+          </Text>
         </div>
-        <Text style={{ fontWeight: 700, fontSize: 14, color: "#1e1b4b" }}>
-          احصل على أفضل سعر
-        </Text>
-        <Text
-          style={{
-            fontSize: 12,
-            color: "#64748B",
-            display: "block",
-            marginTop: 4,
-          }}
-        >
+
+        {/* الوصف تحت */}
+        <Text style={{ fontSize: 12, color: "#64748B" }}>
           لو عاوز تختار أكتر من قطعة بأشكال مختلفة وتاخد نفس العرض وتوفر، أضف
           المنتج بالخصائص اللي أنت حاببها للسلة وبعدين أضف نفس المنتج تاني
           بالخصائص التانية اللي انت عاوزها وهتاخد عرض التوفير ونفس الفكرة لوحابب
-          تاخد 3 أو 4 قطع مختلفة طبق نفس الطريقة. لو حابب تاخد أكتر من قطعة بنفس
-          الخصائص ممكن تضغط على أي زرار تحت.
+          تاخد 3 أو 4 قطع مختلفة طبق نفس الطر
         </Text>
       </div>
       {/* ── ملاحظة لو عنده قطع في السلة ── */}
