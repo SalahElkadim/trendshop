@@ -20,10 +20,11 @@ export default function PriceTiersWidget({
   tiers,
   basePrice,
   quantity,
+  alreadyInCartQty = 0,
   onSelect,
 }) {
   if (!tiers || tiers.length === 0) return null;
-
+  const effectiveQty = alreadyInCartQty + quantity;
   // ── حساب سعر الـ tier المناسبة لكمية معينة ──
   const getPriceForQty = (qty) => {
     const sorted = [...tiers].sort((a, b) => b.min_quantity - a.min_quantity);
@@ -38,7 +39,7 @@ export default function PriceTiersWidget({
   const activeTierIndex = (() => {
     let active = -1;
     tiers.forEach((tier, i) => {
-      if (quantity >= tier.min_quantity) active = i;
+      if (effectiveQty >= tier.min_quantity) active = i; // ← غيّر quantity لـ effectiveQty
     });
     return active;
   })();
@@ -80,7 +81,20 @@ export default function PriceTiersWidget({
           احصل على أفضل سعر
         </Text>
       </div>
-
+      {/* ── ملاحظة لو عنده قطع في السلة ── */}
+      {alreadyInCartQty > 0 && (
+        <Text
+          style={{
+            fontSize: 12,
+            color: "#6366F1",
+            display: "block",
+            marginBottom: 10,
+          }}
+        >
+          عندك {alreadyInCartQty} في السلة — السعر محسوب على الإجمالي (
+          {effectiveQty})
+        </Text>
+      )}
       {/* ── Tiers ── */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {tiers.map((tier, index) => {

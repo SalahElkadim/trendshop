@@ -30,6 +30,11 @@ const { Title, Text } = Typography;
 const ProductDetailPage = observer(() => {
   const { slug } = useParams();
   const [product, setProduct] = useState(null);
+  const cartQtyForProduct = product
+    ? cartStore.items
+        .filter((item) => item.product === product.id)
+        .reduce((sum, item) => sum + item.quantity, 0)
+    : 0;
   const [visibleReviews, setVisibleReviews] = useState(5);
   const [selectedAttrs, setSelectedAttrs] = useState({});
   const [selectedVariant, setSelectedVariant] = useState(null);
@@ -121,20 +126,22 @@ const ProductDetailPage = observer(() => {
   };
 
   // ── حساب السعر والكمية ──────────────────────────────────────────────────
-  const getPriceForQuantity = (qty) => {
+  const getPriceForQuantity = (totalQty) => {
     const tiers = product?.price_tiers;
-    if (!tiers || tiers.length === 0)
-      return selectedVariant?.effective_price || product?.effective_price;
+    const base = Number(
+      selectedVariant?.effective_price || product?.effective_price || 0
+    );
+    if (!tiers || tiers.length === 0) return base;
 
     const sorted = [...tiers].sort((a, b) => b.min_quantity - a.min_quantity);
-    const matched = sorted.find((t) => t.min_quantity <= qty);
-    return matched
-      ? Number(matched.unit_price)
-      : Number(selectedVariant?.effective_price || product?.effective_price);
+    const matched = sorted.find((t) => t.min_quantity <= totalQty);
+    return matched ? Number(matched.unit_price) : base;
   };
 
-  const currentPrice = getPriceForQuantity(quantity);
-  const currentTotal = currentPrice * quantity;
+  // ✅ نحسب التيرة على الإجمالي (اللي في السلة + اللي هيتضاف دلوقتي)
+  const effectiveTotalQty = cartQtyForProduct + quantity;
+  const currentPrice = getPriceForQuantity(effectiveTotalQty);
+  const currentTotal = currentPrice * quantity; // ده سعر القطع اللي هتتضاف دلوقتي فقط
   const maxQty = selectedVariant ? selectedVariant.stock : 99;
   const isOutOfStock = selectedVariant
     ? selectedVariant.is_out_of_stock
@@ -144,6 +151,10 @@ const ProductDetailPage = observer(() => {
     !product?.available_attributes?.length ||
     product.available_attributes.every((attr) => selectedAttrs[attr.attribute]);
 
+  const handleTierSelect = (tierMinQty) => {
+    const neededQty = Math.max(1, tierMinQty - cartQtyForProduct);
+    setQuantity(neededQty);
+  };
   // ── إضافة للسلة ─────────────────────────────────────────────────────────
   const handleAddToCart = () => {
     trackEvent("AddToCart", {
@@ -474,8 +485,19 @@ const ProductDetailPage = observer(() => {
                 selectedVariant?.effective_price || product?.effective_price
               }
               quantity={quantity}
-              onSelect={(qty) => setQuantity(qty)}
+              alreadyInCartQty={cartQtyForProduct} // ← أضف ده
+              onSelect={handleTierSelect} // ← غيّر ده
             />
+          )}
+          {cartQtyForProduct > 0 && (
+            <Text
+              type="secondary"
+              style={{ fontSize: 13, display: "block", marginBottom: 8 }}
+            >
+              📦 لديك {cartQtyForProduct}{" "}
+              {cartQtyForProduct === 1 ? "قطعة" : "قطع"} من هذا المنتج في السلة
+              بالفعل — أضف المزيد للحصول على سعر أفضل.
+            </Text>
           )}
           {/* Quantity */}
           <div className="flex items-center gap-4 mb-6">
