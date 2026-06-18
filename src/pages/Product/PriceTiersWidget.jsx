@@ -94,7 +94,7 @@ export default function PriceTiersWidget({
           الخصائص ممكن تضغط على أي زرار تحت.
         </Text>
       </div>
-      {/* ── ملاحظة لو عنده قطع في السلة ── */}
+      {/* ملاحظة لو عنده قطع في السلة ── */}
       {alreadyInCartQty > 0 && (
         <Text
           style={{
