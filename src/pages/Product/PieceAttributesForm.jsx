@@ -84,7 +84,7 @@ export default function PieceAttributesForm({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [signature, slug]);
 
   const pieceLabel = PIECE_LABELS[index] || `رقم ${index + 1}`;
