@@ -3,18 +3,20 @@
 // يتضاف في صفحة تفاصيل المنتج فوق الـ Quantity selector
 // ─────────────────────────────────────────────────────────────────────────────
 
-import React from "react";
-import { Typography, Tag } from "antd";
+import React, { useState } from "react";
+import { Typography, Tag, InputNumber } from "antd";
 import { TagsOutlined, ThunderboltOutlined } from "@ant-design/icons";
 
 const { Text } = Typography;
 
 /**
  * Props:
- *   tiers        : [{min_quantity, unit_price}]  ← من product.price_tiers
- *   basePrice    : number                         ← product.effective_price (سعر القطعة الواحدة بدون tiers)
- *   quantity     : number                         ← الكمية الحالية المختارة
- *   onSelect     : (qty) => void                  ← لما يضغط على tier يغير الـ quantity
+ *   tiers             : [{min_quantity, unit_price}]  ← من product.price_tiers
+ *   basePrice         : number                         ← product.effective_price
+ *   quantity          : number                         ← إجمالي الكمية/القطع المختارة حالياً
+ *   alreadyInCartQty  : number
+ *   onSelect          : (qty) => void                  ← لما يضغط على تير
+ *   onCustomQuantity  : (qty) => void                  ← لما يكتب كمية أكبر من أعلى تير يدوي
  */
 export default function PriceTiersWidget({
   tiers,
@@ -22,24 +24,25 @@ export default function PriceTiersWidget({
   quantity,
   alreadyInCartQty = 0,
   onSelect,
+  onCustomQuantity,
 }) {
+  const [customQty, setCustomQty] = useState(null);
+
   if (!tiers || tiers.length === 0) return null;
   const effectiveQty = alreadyInCartQty + quantity;
-  // ── حساب سعر الـ tier المناسبة لكمية معينة ──
+
   const getPriceForQty = (qty) => {
     const sorted = [...tiers].sort((a, b) => b.min_quantity - a.min_quantity);
     const matched = sorted.find((t) => t.min_quantity <= qty);
     return matched ? Number(matched.unit_price) : Number(basePrice);
   };
 
-  // ── أعلى كمية في الـ tiers ──
   const maxTierQty = Math.max(...tiers.map((t) => t.min_quantity));
 
-  // ── الـ tier المختارة حالياً ──
   const activeTierIndex = (() => {
     let active = -1;
     tiers.forEach((tier, i) => {
-      if (effectiveQty >= tier.min_quantity) active = i; // ← غيّر quantity لـ effectiveQty
+      if (effectiveQty >= tier.min_quantity) active = i;
     });
     return active;
   })();
@@ -55,16 +58,14 @@ export default function PriceTiersWidget({
       }}
     >
       {/* ── Header ── */}
-      {/* ── Header ── */}
       <div
         style={{
           display: "flex",
-          flexDirection: "column", // ← غيّر من row لـ column
+          flexDirection: "column",
           gap: 6,
           marginBottom: 14,
         }}
       >
-        {/* الأيقونة والعنوان في row */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div
             style={{
@@ -85,16 +86,13 @@ export default function PriceTiersWidget({
           </Text>
         </div>
 
-        {/* الوصف تحت */}
         <Text style={{ fontSize: 12, color: "#64748B" }}>
-          لو عاوز تختار أكتر من قطعة بأشكال مختلفة وتاخد نفس العرض وتوفر، أضف
-          المنتج بالخصائص اللي أنت حاببها للسلة وبعدين أضف نفس المنتج تاني
-          بالخصائص التانية اللي انت عاوزها وهتاخد عرض التوفير ونفس الفكرة لوحابب
-          تاخد 3 أو 4 قطع مختلفة طبق نفس الطريقة. لو حابب تاخد أكتر من قطعة بنفس
-          الخصائص ممكن تضغط على أي زرار تحت.
+          اختار عدد القطع اللي عايزها، وهيظهرلك تحت فورم بسيط تدخل فيه خصائص كل
+          قطعة (لون، مقاس...) عشان نجهزها صح. ولو عايز أكتر من القطع الموجودة
+          هنا، اكتب العدد يدوي تحت.
         </Text>
       </div>
-      {/* ملاحظة لو عنده قطع في السلة ── */}
+
       {alreadyInCartQty > 0 && (
         <Text
           style={{
@@ -108,6 +106,7 @@ export default function PriceTiersWidget({
           {effectiveQty})
         </Text>
       )}
+
       {/* ── Tiers ── */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {tiers.map((tier, index) => {
@@ -115,18 +114,19 @@ export default function PriceTiersWidget({
           const unitPrice = Number(tier.unit_price);
           const totalPrice = unitPrice * qty;
 
-          // وفّر = الفرق بين السعر بدون tier والسعر مع tier
           const originalTotal = Number(basePrice) * qty;
           const saved = originalTotal - totalPrice;
           const hasSaving = saved > 0;
 
-          // هل الـ tier دي هي المختارة حالياً
           const isActive = index === activeTierIndex;
 
           return (
             <button
               key={index}
-              onClick={() => onSelect(qty)}
+              onClick={() => {
+                setCustomQty(null);
+                onSelect(qty);
+              }}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -145,7 +145,6 @@ export default function PriceTiersWidget({
                 textAlign: "right",
               }}
             >
-              {/* ── يسار: الكمية ── */}
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div
                   style={{
@@ -181,7 +180,6 @@ export default function PriceTiersWidget({
                 </Text>
               </div>
 
-              {/* ── يمين: السعر والتوفير ── */}
               <div
                 style={{
                   display: "flex",
@@ -235,15 +233,29 @@ export default function PriceTiersWidget({
           alignItems: "center",
           justifyContent: "space-between",
           gap: 8,
+          flexWrap: "wrap",
         }}
       >
         <Text style={{ fontSize: 12, color: "#64748B" }}>
-          أو اختر الكمية التي تريدها:
+          أكتر من {maxTierQty} قطعة؟ اكتب العدد:
         </Text>
-        <Text style={{ fontSize: 11, color: "#94a3b8" }}>
-          (أكثر من {maxTierQty} قطعة بسعر{" "}
-          {getPriceForQty(maxTierQty).toLocaleString()} ج.م للقطعة)
-        </Text>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <InputNumber
+            size="small"
+            min={maxTierQty + 1}
+            max={99}
+            value={customQty}
+            placeholder={`${maxTierQty + 1}+`}
+            onChange={(val) => {
+              setCustomQty(val);
+              if (val && onCustomQuantity) onCustomQuantity(val);
+            }}
+            style={{ width: 80 }}
+          />
+          <Text style={{ fontSize: 11, color: "#94a3b8" }}>
+            ({getPriceForQty(maxTierQty).toLocaleString()} ج.م للقطعة)
+          </Text>
+        </div>
       </div>
     </div>
   );

@@ -23,7 +23,7 @@ import cartStore from "../../stores/cartStore";
 import authStore from "../../stores/authStore";
 import { trackEvent } from "../../utils/pixel";
 import PriceTiersWidget from "./PriceTiersWidget"; // ← عدّل المسار
-
+import PieceAttributesForm from "./PieceAttributesForm"; // ← عدّل المسار
 
 const { Title, Text } = Typography;
 
@@ -47,6 +47,12 @@ const ProductDetailPage = observer(() => {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewForm] = Form.useForm();
 
+  // ── ✦ NEW: حالة "أكتر من قطعة بخصائص مختلفة في نفس الطلب" ────────────────
+  // pieces: [{attrs: {attributeName: valueObj}}]  واحدة لكل قطعة
+  // pieceVariants: [variant|null] بنفس الترتيب — الـ variant المتطابق لكل قطعة
+  const [pieces, setPieces] = useState([]);
+  const [pieceVariants, setPieceVariants] = useState([]);
+
   // ── تحميل المنتج ──────────────────────────────────────────────────────────
   useEffect(() => {
     const load = async () => {
@@ -61,6 +67,9 @@ const ProductDetailPage = observer(() => {
         setMediaType("image");
         setSelectedAttrs({});
         setSelectedVariant(null);
+        setQuantity(1);
+        setPieces([]); // ✦ NEW
+        setPieceVariants([]); // ✦ NEW
         trackEvent("ViewContent", {
           content_name: p.name,
           content_ids: [p.id.toString()],
@@ -76,7 +85,7 @@ const ProductDetailPage = observer(() => {
     load();
   }, [slug]);
 
-  // ── لما كل الـ attributes تتاختار → دور على الـ variant ──────────────────
+  // ── لما كل الـ attributes تتاختار → دور على الـ variant (المسار القديم: منتج بخصائص بدون tiers) ──
   useEffect(() => {
     if (!product?.available_attributes?.length) return;
 
@@ -105,15 +114,12 @@ const ProductDetailPage = observer(() => {
     findVariant();
   }, [selectedAttrs, product, slug]);
 
-  // ── ✦ لما يتغير الـ selected attribute value → غيّر الصورة لو في صورة مرتبطة
-  // product.images كل صورة عندها attribute_value (id أو null)
-  // لما اليوزر يختار قيمة → نشوف لو في صورة عندها attribute_value == val.id
+  // ── لما يتغير الـ selected attribute value → غيّر الصورة لو في صورة مرتبطة (المسار القديم) ──
   const handleAttrSelect = (attrName, val) => {
     setSelectedAttrs((prev) => ({ ...prev, [attrName]: val }));
 
     if (!product?.images) return;
 
-    // دور على صورة مرتبطة بالـ attribute value ده
     const linkedImage = product.images.find(
       (img) => img.attribute_value === val.id
     );
@@ -122,7 +128,53 @@ const ProductDetailPage = observer(() => {
       setMainImage(linkedImage.image);
       setMediaType("image");
     }
-    // لو مفيش صورة مرتبطة → فضّل على الصورة الحالية (مش بنغير حاجة)
+  };
+
+  // ── ✦ NEW: هل المنتج محتاج المسار الجديد (تيرز + خصائص مع بعض)؟ ─────────
+  const hasTiers = product?.price_tiers?.length > 0;
+  const hasAttributes = product?.available_attributes?.length > 0;
+  const usesPiecesFlow = !!(hasTiers && hasAttributes);
+
+  // ── ✦ NEW: يظبط عدد بلوكات القطع، مع الحفاظ على اللي اتملى قبل كده ──────
+  const setPieceCount = (count) => {
+    setPieces((prev) => {
+      if (count <= prev.length) return prev.slice(0, count);
+      const extra = Array.from({ length: count - prev.length }, () => ({
+        attrs: {},
+      }));
+      return [...prev, ...extra];
+    });
+    setPieceVariants((prev) => {
+      if (count <= prev.length) return prev.slice(0, count);
+      const extra = Array.from({ length: count - prev.length }, () => null);
+      return [...prev, ...extra];
+    });
+  };
+
+  // ── ✦ NEW: اختيار خاصية لقطعة معينة ──────────────────────────────────────
+  const handlePieceAttrSelect = (index, attrName, val) => {
+    setPieces((prev) =>
+      prev.map((p, i) =>
+        i === index ? { ...p, attrs: { ...p.attrs, [attrName]: val } } : p
+      )
+    );
+
+    const linkedImage = product?.images?.find(
+      (img) => img.attribute_value === val.id
+    );
+    if (linkedImage) {
+      setMainImage(linkedImage.image);
+      setMediaType("image");
+    }
+  };
+
+  // ── ✦ NEW: بيتنادي من PieceAttributesForm كل ما الـ variant بتاعها يتغير ──
+  const handlePieceVariantChange = (index, variant) => {
+    setPieceVariants((prev) => {
+      const next = [...prev];
+      next[index] = variant;
+      return next;
+    });
   };
 
   // ── حساب السعر والكمية ──────────────────────────────────────────────────
@@ -138,10 +190,12 @@ const ProductDetailPage = observer(() => {
     return matched ? Number(matched.unit_price) : base;
   };
 
-  // ✅ نحسب التيرة على الإجمالي (اللي في السلة + اللي هيتضاف دلوقتي)
-  const effectiveTotalQty = cartQtyForProduct + quantity;
+  // ✦ totalRequestedQty: عدد القطع/الكمية اللي بنشتريها دلوقتي — يشتغل في الحالتين
+  const totalRequestedQty = usesPiecesFlow ? pieces.length : quantity;
+  const effectiveTotalQty = cartQtyForProduct + totalRequestedQty;
   const currentPrice = getPriceForQuantity(effectiveTotalQty);
-  const currentTotal = currentPrice * quantity; // ده سعر القطع اللي هتتضاف دلوقتي فقط
+  const currentTotal = currentPrice * totalRequestedQty;
+
   const maxQty = selectedVariant ? selectedVariant.stock : 99;
   const isOutOfStock = selectedVariant
     ? selectedVariant.is_out_of_stock
@@ -151,11 +205,43 @@ const ProductDetailPage = observer(() => {
     !product?.available_attributes?.length ||
     product.available_attributes.every((attr) => selectedAttrs[attr.attribute]);
 
+  // ── ✦ NEW: جاهزية القطع كلها (variant متاح ومش نافد) ─────────────────────
+  const piecesAllResolved =
+    pieces.length > 0 &&
+    pieceVariants.length === pieces.length &&
+    pieceVariants.every((v) => v && !v.is_out_of_stock);
+
+  // ✦ NEW: لو قطعتين بنفس الـ variant، نتأكد إن المخزون بيكفي مجموعهم مش بس واحدة
+  const stockOk = (() => {
+    const qtyByVariant = {};
+    pieceVariants.forEach((v) => {
+      if (v) qtyByVariant[v.id] = (qtyByVariant[v.id] || 0) + 1;
+    });
+    return pieceVariants.every((v) => !v || qtyByVariant[v.id] <= v.stock);
+  })();
+
+  const canAddPieces = piecesAllResolved && stockOk;
+
   const handleTierSelect = (tierMinQty) => {
     const neededQty = Math.max(1, tierMinQty - cartQtyForProduct);
-    setQuantity(neededQty);
+    if (usesPiecesFlow) {
+      setPieceCount(neededQty);
+    } else {
+      setQuantity(neededQty);
+    }
   };
-  // ── إضافة للسلة ─────────────────────────────────────────────────────────
+
+  // ✦ NEW: كمية مخصصة لو زادت عن أعلى تير
+  const handleCustomQuantity = (qty) => {
+    if (!qty) return;
+    if (usesPiecesFlow) {
+      setPieceCount(qty);
+    } else {
+      setQuantity(qty);
+    }
+  };
+
+  // ── إضافة للسلة (المسار القديم: قطعة واحدة أو منتج بدون خصائص) ──────────
   const handleAddToCart = () => {
     trackEvent("AddToCart", {
       content_name: product.name,
@@ -167,18 +253,34 @@ const ProductDetailPage = observer(() => {
     });
 
     const variantId = selectedVariant?.id ?? null;
-
-    // ✅ جيب صورة الـ variant المختار
-    const variantImage =
-      product.images?.find(
-        (img) =>
-          img.attribute_value !== null &&
-          Object.values(selectedAttrs).some(
-            (attr) => attr.id === img.attribute_value
-          )
-      )?.image ?? null;
-
     cartStore.addItem(product.id, variantId, quantity);
+  };
+
+  // ── ✦ NEW: إضافة كل القطع للسلة — كل variant بكميته الإجمالية ────────────
+  const handleAddPiecesToCart = () => {
+    const qtyByVariant = {};
+    pieceVariants.forEach((v) => {
+      if (v) qtyByVariant[v.id] = (qtyByVariant[v.id] || 0) + 1;
+    });
+
+    trackEvent("AddToCart", {
+      content_name: product.name,
+      content_ids: [product.id.toString()],
+      content_type: "product",
+      value: parseFloat(currentTotal),
+      currency: "EGP",
+      num_items: pieces.length,
+    });
+
+    Object.entries(qtyByVariant).forEach(([variantId, qty]) => {
+      cartStore.addItem(product.id, Number(variantId), qty);
+    });
+
+    message.success(
+      `تمت إضافة ${pieces.length} ${pieces.length === 1 ? "قطعة" : "قطع"} للسلة`
+    );
+    setPieces([]);
+    setPieceVariants([]);
   };
 
   const handleSubmitReview = async (values) => {
@@ -232,7 +334,7 @@ const ProductDetailPage = observer(() => {
                 src={mainImage || "/placeholder.png"}
                 alt={product.name}
                 className="w-full h-full object-contain"
-                style={{ transition: "opacity 0.25s" }} // ✦ انتقال ناعم عند تغيير الصورة
+                style={{ transition: "opacity 0.25s" }}
               />
             )}
           </div>
@@ -242,7 +344,6 @@ const ProductDetailPage = observer(() => {
             {product.images?.map((img) => {
               const isActive = mediaType === "image" && mainImage === img.image;
 
-              // ✦ لو الصورة دي مرتبطة بـ attribute value → نجيب اسمه عشان نعرضه
               const linkedAttrValue = img.attribute_value
                 ? product.available_attributes
                     ?.flatMap((a) => a.values)
@@ -256,8 +357,9 @@ const ProductDetailPage = observer(() => {
                       setMainImage(img.image);
                       setMediaType("image");
 
-                      // لو الصورة دي مرتبطة بـ attribute value → اختره تلقائياً
-                      if (img.attribute_value) {
+                      // ✦ في المسار القديم بس بنربط الصورة باختيار تلقائي للـ attribute
+                      // (في وضع القطع المتعددة الاختيار بيبقى لكل قطعة لوحدها من الفورم بتاعها)
+                      if (!usesPiecesFlow && img.attribute_value) {
                         const linkedAttr = product.available_attributes?.find(
                           (attr) =>
                             attr.values.some(
@@ -283,7 +385,6 @@ const ProductDetailPage = observer(() => {
                     />
                   </div>
 
-                  {/* ✦ شارة اسم اللون/الخاصية تحت الـ thumbnail */}
                   {linkedAttrValue && (
                     <div
                       style={{
@@ -375,26 +476,34 @@ const ProductDetailPage = observer(() => {
 
           {/* Price */}
           <div className="flex items-center gap-3 mb-6">
-            <Title level={2} style={{ margin: 0, color: "#6366f1" }}>
-              {currentTotal.toLocaleString()} ج.م
-            </Title>
-            {quantity > 1 && (
-              <Text type="secondary" style={{ fontSize: 14 }}>
-                ({currentPrice.toLocaleString()} ج.م × {quantity})
-              </Text>
-            )}
-            {product.discount_price && quantity === 1 && (
+            {usesPiecesFlow && pieces.length === 0 ? (
+              <Title level={3} style={{ margin: 0, color: "#6366f1" }}>
+                يبدأ من {Number(product.effective_price).toLocaleString()} ج.م
+              </Title>
+            ) : (
               <>
-                <Text delete type="secondary" style={{ fontSize: 18 }}>
-                  {Number(product.price).toLocaleString()} ج.م
-                </Text>
-                <Tag color="red">-{product.discount_percentage}%</Tag>
+                <Title level={2} style={{ margin: 0, color: "#6366f1" }}>
+                  {currentTotal.toLocaleString()} ج.م
+                </Title>
+                {totalRequestedQty > 1 && (
+                  <Text type="secondary" style={{ fontSize: 14 }}>
+                    ({currentPrice.toLocaleString()} ج.م × {totalRequestedQty})
+                  </Text>
+                )}
+                {product.discount_price && totalRequestedQty === 1 && (
+                  <>
+                    <Text delete type="secondary" style={{ fontSize: 18 }}>
+                      {Number(product.price).toLocaleString()} ج.م
+                    </Text>
+                    <Tag color="red">-{product.discount_percentage}%</Tag>
+                  </>
+                )}
               </>
             )}
           </div>
 
-          {/* ── ✦ Attribute Selectors مع تغيير الصورة ── */}
-          {product.available_attributes?.length > 0 && (
+          {/* ── Attribute Selectors (المسار القديم فقط: مفيش tiers، أو فيه tiers بس مفيش خصائص) ── */}
+          {!usesPiecesFlow && product.available_attributes?.length > 0 && (
             <div className="mb-6">
               {product.available_attributes.map((attr) => (
                 <div key={attr.attribute} className="mb-4">
@@ -412,7 +521,6 @@ const ProductDetailPage = observer(() => {
                       const isSelected =
                         selectedAttrs[attr.attribute]?.id === val.id;
 
-                      // ✦ لو الـ value دي عندها صورة مرتبطة، نجيبها عشان نعرض preview
                       const linkedImg = product.images?.find(
                         (img) => img.attribute_value === val.id
                       );
@@ -440,7 +548,6 @@ const ProductDetailPage = observer(() => {
                             minWidth: linkedImg ? 60 : "auto",
                           }}
                         >
-                          {/* ✦ لو في صورة مرتبطة → اعرض صورة صغيرة جوه الزرار */}
                           {linkedImg && (
                             <img
                               src={linkedImg.image}
@@ -478,17 +585,20 @@ const ProductDetailPage = observer(() => {
               )}
             </div>
           )}
+
           {product?.price_tiers?.length > 0 && (
             <PriceTiersWidget
               tiers={product.price_tiers}
               basePrice={
                 selectedVariant?.effective_price || product?.effective_price
               }
-              quantity={quantity}
-              alreadyInCartQty={cartQtyForProduct} // ← أضف ده
-              onSelect={handleTierSelect} // ← غيّر ده
+              quantity={totalRequestedQty}
+              alreadyInCartQty={cartQtyForProduct}
+              onSelect={handleTierSelect}
+              onCustomQuantity={handleCustomQuantity}
             />
           )}
+
           {cartQtyForProduct > 0 && (
             <Text
               type="secondary"
@@ -499,45 +609,88 @@ const ProductDetailPage = observer(() => {
               بالفعل — أضف المزيد للحصول على سعر أفضل.
             </Text>
           )}
-          {/* Quantity */}
-          <div className="flex items-center gap-4 mb-6">
-            <Text strong>
-              {product?.price_tiers?.length > 0
-                ? `أو اختر كمية أخرى:`
-                : "الكمية:"}
-            </Text>
-            <InputNumber
-              min={1}
-              max={maxQty || 99}
-              value={quantity}
-              onChange={setQuantity}
-              style={{ width: 100 }}
-            />
-            {selectedVariant && <Text type="secondary">({maxQty} متاح)</Text>}
-          </div>
+
+          {/* ── ✦ NEW: فورمز خصائص كل قطعة (لما يكون عند المنتج tiers + خصائص) ── */}
+          {usesPiecesFlow && pieces.length > 0 && (
+            <div className="mb-6">
+              <Text strong style={{ display: "block", marginBottom: 10 }}>
+                أدخل خصائص كل قطعة:
+              </Text>
+              {pieces.map((piece, idx) => (
+                <PieceAttributesForm
+                  key={idx}
+                  index={idx}
+                  attrs={piece.attrs}
+                  availableAttributes={product.available_attributes}
+                  slug={slug}
+                  onAttrSelect={handlePieceAttrSelect}
+                  onVariantChange={handlePieceVariantChange}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* ── Quantity (المسار القديم فقط) ── */}
+          {!usesPiecesFlow && (
+            <div className="flex items-center gap-4 mb-6">
+              <Text strong>
+                {product?.price_tiers?.length > 0
+                  ? `أو اختر كمية أخرى:`
+                  : "الكمية:"}
+              </Text>
+              <InputNumber
+                min={1}
+                max={maxQty || 99}
+                value={quantity}
+                onChange={setQuantity}
+                style={{ width: 100 }}
+              />
+              {selectedVariant && <Text type="secondary">({maxQty} متاح)</Text>}
+            </div>
+          )}
 
           {/* Add to Cart */}
-          <Button
-            type="primary"
-            size="large"
-            block
-            icon={<ShoppingCartOutlined />}
-            disabled={
-              isOutOfStock ||
-              variantLoading ||
-              (product.available_attributes?.length > 0 && !selectedVariant)
-            }
-            onClick={handleAddToCart}
-            loading={cartStore.isLoading || variantLoading}
-          >
-            {variantLoading
-              ? "جاري التحقق..."
-              : product.available_attributes?.length > 0 && !selectedVariant
-              ? "اختر المواصفات أولاً"
-              : isOutOfStock
-              ? "نفد المخزون"
-              : "أضف للسلة"}
-          </Button>
+          {usesPiecesFlow ? (
+            <Button
+              type="primary"
+              size="large"
+              block
+              icon={<ShoppingCartOutlined />}
+              disabled={pieces.length === 0 || !canAddPieces}
+              onClick={handleAddPiecesToCart}
+              loading={cartStore.isLoading}
+            >
+              {pieces.length === 0
+                ? "اختر عدد القطع أولاً"
+                : !piecesAllResolved
+                ? "استكمل بيانات كل قطعة"
+                : !stockOk
+                ? "الكمية المطلوبة غير متوفرة في المخزون"
+                : "أضف للسلة"}
+            </Button>
+          ) : (
+            <Button
+              type="primary"
+              size="large"
+              block
+              icon={<ShoppingCartOutlined />}
+              disabled={
+                isOutOfStock ||
+                variantLoading ||
+                (product.available_attributes?.length > 0 && !selectedVariant)
+              }
+              onClick={handleAddToCart}
+              loading={cartStore.isLoading || variantLoading}
+            >
+              {variantLoading
+                ? "جاري التحقق..."
+                : product.available_attributes?.length > 0 && !selectedVariant
+                ? "اختر المواصفات أولاً"
+                : isOutOfStock
+                ? "نفد المخزون"
+                : "أضف للسلة"}
+            </Button>
+          )}
 
           <Divider />
         </Col>
