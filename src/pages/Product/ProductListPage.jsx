@@ -17,7 +17,8 @@ import {
 import { FilterOutlined } from "@ant-design/icons";
 import { productsAPI, categoriesAPI } from "../../api/services";
 import ProductCard from "../../components/product/ProductCard";
-
+import { trackEvent as trackFacebookEvent } from "../../utils/pixel";
+import { trackEvent as trackTikTokEvent } from "../../utils/tiktokPixel";
 const { Title, Text } = Typography;
 
 const ProductListPage = () => {
@@ -118,7 +119,22 @@ const ProductListPage = () => {
         <Input.Search
           placeholder="ابحث عن منتج..."
           defaultValue={filters.search}
-          onSearch={(v) => updateFilter("search", v)}
+          onSearch={(v) => {
+            updateFilter("search", v);
+
+            if (v.trim()) {
+              // Facebook Pixel
+              trackFacebookEvent("Search", {
+                search_string: v.trim(),
+                content_type: "product",
+              });
+
+              // TikTok Pixel
+              trackTikTokEvent("Search", {
+                query: v.trim(),
+              });
+            }
+          }}
           allowClear
           style={{ flex: 1, minWidth: 200 }}
         />

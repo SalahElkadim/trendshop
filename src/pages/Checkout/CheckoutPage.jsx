@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { trackEvent as trackFacebookEvent } from "../../utils/pixel";
+import { trackEvent as trackTikTokEvent } from "../../utils/tiktokPixel";
 import { useNavigate } from "react-router-dom";
 import { observer } from "mobx-react-lite";
 import { runInAction } from "mobx";
@@ -30,7 +32,6 @@ const { Option } = Select;
 const CheckoutPage = observer(() => {
   const navigate = useNavigate();
   const [form] = Form.useForm();
-
   const [shippingRates, setShippingRates] = useState([]);
   const [ratesLoading, setRatesLoading] = useState(true);
 
@@ -72,6 +73,17 @@ const CheckoutPage = observer(() => {
   const subtotal = Number(cartStore.subtotal);
   const discount = couponData ? Number(couponData.discount_amount) : 0;
   const finalTotal = subtotal - discount + shippingCost;
+  useEffect(() => {
+    if (cartStore.items.length === 0) return;
+    if (checkoutTracked.current) return;
+
+    const totalItems = cartStore.items.reduce(
+      (total, item) => total + item.quantity,
+      0
+    );
+
+    checkoutTracked.current = true;
+  }, [cartStore.items.length, finalTotal]);
   const shippingLabel = getShippingLabel(shippingCost);
 
   // ── واتساب ───────────────────────────────────────────────────────────────

@@ -12,8 +12,8 @@ import {
 } from "antd";
 import { DeleteOutlined, ShoppingOutlined } from "@ant-design/icons";
 import cartStore from "../../stores/cartStore";
-import { trackEvent } from "../../utils/pixel";
-
+import { trackEvent as trackFacebookEvent } from "../../utils/pixel";
+import { trackEvent as trackTikTokEvent } from "../../utils/tiktokPixel";
 const { Title, Text } = Typography;
 
 // ✅ كارد منتج للموبايل
@@ -110,18 +110,37 @@ const CartPage = observer(() => {
   const navigate = useNavigate();
 
   const handleCheckout = () => {
-    trackEvent("InitiateCheckout", {
-      content_ids: cartStore.items.map(
-        (item) => item.product_id?.toString() || item.id.toString()
-      ),
+    const contentIds = cartStore.items.map(
+      (item) => item.product_id?.toString() || item.id.toString()
+    );
+
+    const totalItems = cartStore.items.reduce(
+      (total, item) => total + item.quantity,
+      0
+    );
+
+    const totalValue = parseFloat(cartStore.subtotal);
+
+    // Facebook Pixel
+    trackFacebookEvent("InitiateCheckout", {
+      content_ids: contentIds,
       contents: cartStore.items.map((item) => ({
         id: item.product_id?.toString() || item.id.toString(),
         quantity: item.quantity,
         item_price: parseFloat(item.unit_price),
       })),
-      num_items: cartStore.itemsCount,
-      value: parseFloat(cartStore.subtotal),
+      num_items: totalItems,
+      value: totalValue,
       currency: "EGP",
+    });
+
+    // TikTok Pixel
+    trackTikTokEvent("InitiateCheckout", {
+      content_id: contentIds,
+      content_type: "product",
+      value: totalValue,
+      currency: "EGP",
+      num_items: totalItems,
     });
 
     navigate("/checkout");

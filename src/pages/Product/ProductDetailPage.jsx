@@ -21,10 +21,11 @@ import { ShoppingCartOutlined } from "@ant-design/icons";
 import { productsAPI, reviewsAPI } from "../../api/services";
 import cartStore from "../../stores/cartStore";
 import authStore from "../../stores/authStore";
-import { trackEvent } from "../../utils/pixel";
+import { trackEvent as trackFacebookEvent } from "../../utils/pixel";
+import { trackEvent as trackTikTokEvent } from "../../utils/tiktokPixel";
 import PriceTiersWidget from "./PriceTiersWidget"; // ← عدّل المسار
 import PieceAttributesForm from "./PieceAttributesForm"; // ← عدّل المسار
-
+import { trackEvent } from "../../utils/tiktokPixel";
 const { Title, Text } = Typography;
 
 const ProductDetailPage = observer(() => {
@@ -70,12 +71,19 @@ const ProductDetailPage = observer(() => {
         setQuantity(1);
         setPieces([]); // ✦ NEW
         setPieceVariants([]); // ✦ NEW
-        trackEvent("ViewContent", {
-          content_name: p.name,
-          content_ids: [p.id.toString()],
+        trackFacebookEvent("ViewContent", {
+          content_ids: [String(p.id)],
           content_type: "product",
-          content_category: p.category_name,
-          value: parseFloat(p.effective_price),
+          content_name: p.name,
+          value: Number(p.effective_price),
+          currency: "EGP",
+        });
+
+        trackTikTokEvent("ViewContent", {
+          content_id: String(p.id),
+          content_type: "product",
+          content_name: p.name,
+          value: Number(p.effective_price),
           currency: "EGP",
         });
       } finally {
@@ -243,10 +251,19 @@ const ProductDetailPage = observer(() => {
 
   // ── إضافة للسلة (المسار القديم: قطعة واحدة أو منتج بدون خصائص) ──────────
   const handleAddToCart = () => {
-    trackEvent("AddToCart", {
+    trackFacebookEvent("AddToCart", {
       content_name: product.name,
       content_ids: [product.id.toString()],
       content_type: "product",
+      value: parseFloat(currentPrice) * quantity,
+      currency: "EGP",
+      num_items: quantity,
+    });
+
+    trackTikTokEvent("AddToCart", {
+      content_id: String(product.id),
+      content_type: "product",
+      content_name: product.name,
       value: parseFloat(currentPrice) * quantity,
       currency: "EGP",
       num_items: quantity,
@@ -263,10 +280,19 @@ const ProductDetailPage = observer(() => {
       if (v) qtyByVariant[v.id] = (qtyByVariant[v.id] || 0) + 1;
     });
 
-    trackEvent("AddToCart", {
+    trackFacebookEvent("AddToCart", {
       content_name: product.name,
       content_ids: [product.id.toString()],
       content_type: "product",
+      value: parseFloat(currentTotal),
+      currency: "EGP",
+      num_items: pieces.length,
+    });
+
+    trackTikTokEvent("AddToCart", {
+      content_id: String(product.id),
+      content_type: "product",
+      content_name: product.name,
       value: parseFloat(currentTotal),
       currency: "EGP",
       num_items: pieces.length,

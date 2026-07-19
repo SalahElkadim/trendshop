@@ -29,8 +29,11 @@ import RegisterPage from "./pages/Auth/RegisterPage";
 import AccountPage from "./pages/Account/AccountPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import AboutUs from "./pages/AboutUs";
-
 import { initPixel, pageView } from "./utils/pixel";
+import {
+  initTikTokPixel,
+  pageView as tikTokPageView,
+} from "./utils/tiktokPixel";
 
 // ← تتبع تغيير الصفحات + ScrollToTop
 const PixelPageTracker = () => {
@@ -38,7 +41,12 @@ const PixelPageTracker = () => {
 
   useEffect(() => {
     window.scrollTo(0, 0);
+
+    // Facebook PageView
     pageView();
+
+    // TikTok PageView
+    tikTokPageView();
   }, [location.pathname]);
 
   return null;
@@ -65,7 +73,12 @@ const GuestRoute = observer(({ children }) => {
 const App = observer(() => {
   useEffect(() => {
     cartStore.fetchCart();
+
+    // Facebook Pixel
     initPixel();
+
+    // TikTok Pixel
+    initTikTokPixel();
   }, []);
 
   return (
