@@ -73,17 +73,6 @@ const CheckoutPage = observer(() => {
   const subtotal = Number(cartStore.subtotal);
   const discount = couponData ? Number(couponData.discount_amount) : 0;
   const finalTotal = subtotal - discount + shippingCost;
-  useEffect(() => {
-    if (cartStore.items.length === 0) return;
-    if (checkoutTracked.current) return;
-
-    const totalItems = cartStore.items.reduce(
-      (total, item) => total + item.quantity,
-      0
-    );
-
-    checkoutTracked.current = true;
-  }, [cartStore.items.length, finalTotal]);
   const shippingLabel = getShippingLabel(shippingCost);
 
   // ── واتساب ───────────────────────────────────────────────────────────────
@@ -159,6 +148,25 @@ const CheckoutPage = observer(() => {
 
       const res = await ordersAPI.checkout(payload);
       const order = res.data.data;
+
+      // ✅ Purchase event هنا، مكانها الصح
+      trackFacebookEvent("Purchase", {
+        value: finalTotal,
+        currency: "EGP",
+        content_ids: cartStore.items.map(
+          (item) => item.product_id?.toString() || item.id.toString()
+        ),
+        num_items: cartStore.items.reduce((t, i) => t + i.quantity, 0),
+      });
+
+      trackTikTokEvent("Purchase", {
+        value: finalTotal,
+        currency: "EGP",
+        content_id: cartStore.items.map(
+          (item) => item.product_id?.toString() || item.id.toString()
+        ),
+        content_type: "product",
+      });
 
       runInAction(() => {
         cartStore.cart = {
