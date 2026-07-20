@@ -9,23 +9,21 @@ const OrderSuccessPage = () => {
   const [orderData, setOrderData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchOrderAndTrack = async () => {
-      try {
-        const res = await ordersAPI.getOrder(orderNumber);
-        const order = res.data.data;
-        setOrderData(order);
+useEffect(() => {
+  const fetchOrderAndTrack = async () => {
+    try {
+      const res = await ordersAPI.getOrder(orderNumber);
+      const order = res.data.data;
+      setOrderData(order);
 
-        // ✅ تتبع إتمام الشراء - يشتغل مرة واحدة فقط
+      const trackedKey = `purchase_tracked_${orderNumber}`;
+      if (!localStorage.getItem(trackedKey)) {
         const contentIds =
           order.items?.map((item) => item.product_id?.toString()) || [];
-
         const totalItems =
           order.items?.reduce((total, item) => total + item.quantity, 0) || 0;
-
         const totalValue = parseFloat(order.total_price);
 
-        // Facebook Pixel
         trackFacebookEvent("Purchase", {
           content_ids: contentIds,
           contents:
@@ -40,7 +38,6 @@ const OrderSuccessPage = () => {
           num_items: totalItems,
         });
 
-        // TikTok Pixel
         trackTikTokEvent("Purchase", {
           content_id: contentIds,
           content_type: "product",
@@ -48,15 +45,19 @@ const OrderSuccessPage = () => {
           currency: "EGP",
           num_items: totalItems,
         });
-      } catch (err) {
-        console.error("Failed to fetch order:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
 
-    fetchOrderAndTrack();
-  }, [orderNumber]); // يشتغل مرة واحدة عند تحميل الصفحة
+        localStorage.setItem(trackedKey, "true");
+      }
+    } catch (err) {
+      console.error("Failed to fetch order:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchOrderAndTrack();
+}, [orderNumber]);
+
 
   if (loading) {
     return (
