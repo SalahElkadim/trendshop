@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import { trackEvent as trackFacebookEvent } from "../../utils/pixel";
-import { trackEvent as trackTikTokEvent } from "../../utils/tiktokPixel";
 import { useNavigate } from "react-router-dom";
 import { observer } from "mobx-react-lite";
 import { runInAction } from "mobx";
@@ -148,25 +146,6 @@ const CheckoutPage = observer(() => {
 
       const res = await ordersAPI.checkout(payload);
       const order = res.data.data;
-
-      // ✅ Purchase event هنا، مكانها الصح
-      trackFacebookEvent("Purchase", {
-        value: finalTotal,
-        currency: "EGP",
-        content_ids: cartStore.items.map(
-          (item) => item.product_id?.toString() || item.id.toString()
-        ),
-        num_items: cartStore.items.reduce((t, i) => t + i.quantity, 0),
-      });
-
-      trackTikTokEvent("Purchase", {
-        value: finalTotal,
-        currency: "EGP",
-        content_id: cartStore.items.map(
-          (item) => item.product_id?.toString() || item.id.toString()
-        ),
-        content_type: "product",
-      });
 
       runInAction(() => {
         cartStore.cart = {

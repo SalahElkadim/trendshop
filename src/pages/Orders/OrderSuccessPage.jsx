@@ -10,37 +10,31 @@ const OrderSuccessPage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchOrderAndTrack = async () => {
-      try {
-        const res = await ordersAPI.getOrder(orderNumber);
-        const order = res.data.data;
-        setOrderData(order);
+  const fetchOrderAndTrack = async () => {
+    try {
+      const res = await ordersAPI.getOrder(orderNumber);
+      const order = res.data.data;
+      setOrderData(order);
 
-        // ✅ تتبع إتمام الشراء - يشتغل مرة واحدة فقط
-        const contentIds =
-          order.items?.map((item) => item.product_id?.toString()) || [];
-
-        const totalItems =
-          order.items?.reduce((total, item) => total + item.quantity, 0) || 0;
-
+      const trackedKey = `purchase_tracked_${orderNumber}`;
+      if (!localStorage.getItem(trackedKey)) {
+        const contentIds = order.items?.map((item) => item.product_id?.toString()) || [];
+        const totalItems = order.items?.reduce((total, item) => total + item.quantity, 0) || 0;
         const totalValue = parseFloat(order.total_price);
 
-        // Facebook Pixel
         trackFacebookEvent("Purchase", {
           content_ids: contentIds,
-          contents:
-            order.items?.map((item) => ({
-              id: item.product_id?.toString(),
-              quantity: item.quantity,
-              item_price: parseFloat(item.unit_price),
-            })) || [],
+          contents: order.items?.map((item) => ({
+            id: item.product_id?.toString(),
+            quantity: item.quantity,
+            item_price: parseFloat(item.unit_price),
+          })) || [],
           order_id: order.order_number,
           value: totalValue,
           currency: "EGP",
           num_items: totalItems,
         });
 
-        // TikTok Pixel
         trackTikTokEvent("Purchase", {
           content_id: contentIds,
           content_type: "product",
@@ -48,16 +42,18 @@ const OrderSuccessPage = () => {
           currency: "EGP",
           num_items: totalItems,
         });
-      } catch (err) {
-        console.error("Failed to fetch order:", err);
-      } finally {
-        setLoading(false);
+
+        localStorage.setItem(trackedKey, "true");
       }
-    };
+    } catch (err) {
+      console.error("Failed to fetch order:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchOrderAndTrack();
-  }, [orderNumber]); // يشتغل مرة واحدة عند تحميل الصفحة
-
+  fetchOrderAndTrack();
+}, [orderNumber]);
   if (loading) {
     return (
       <div
@@ -77,7 +73,12 @@ const OrderSuccessPage = () => {
       <Result
         status="success"
         title="تم استلام طلبك بنجاح! 🎉"
-        subTitle={`رقم الطلب: ${orderNumber} -سيتم التواصل معك على مدار اليوم لتأكيد الطلب .`}
+        subTitle={
+  <span>
+    {`رقم الطلب: ${orderNumber} - `}
+    <b>سيتواصل معك مندوب الشحن خلال يومين بإذن الله</b>
+  </span>
+}
         extra={[
           <Link to={`/orders/${orderNumber}`} key="detail">
             <Button type="primary">تتبع الطلب</Button>
